@@ -3,6 +3,8 @@ import { Forum, Public_Sans } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+
 const forum = Forum({
   weight: "400",
   subsets: ["latin"],
@@ -30,12 +32,13 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body
-        className={`${publicSans.className} ${forum.variable} ${publicSans.variable} antialiased bg-secondary-50 text-neutral-800`}
+        className={`${publicSans.className} ${forum.variable} ${publicSans.variable} antialiased bg-cover bg-center text-neutral-800`}
       >
         <Providers>
           <Navbar />
           {children}
         </Providers>
+        <Footer></Footer>
       </body>
     </html>
   );
