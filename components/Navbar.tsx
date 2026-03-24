@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
+import LogoutModal from "@/components/ui/LogoutModal";
 
 export default function Navbar() {
   const { status } = useSession();
   const pathname = usePathname();
+  const [isLogoutOpen, setIsLogoutOpen] = useState(false);
 
   const navItem =
     "px-3 py-2 transition-colors duration-200 ease-in-out font-sans";
@@ -92,7 +95,7 @@ export default function Navbar() {
                 Profil Saya
               </Link>
               <button
-                onClick={() => signOut({ callbackUrl: "/" })}
+                onClick={() => setIsLogoutOpen(true)}
                 className={btnSolid}
               >
                 Keluar
@@ -101,6 +104,12 @@ export default function Navbar() {
           )}
         </div>
       </div>
+
+      {/* Modal Logout */}
+      <LogoutModal
+        isOpen={isLogoutOpen}
+        onClose={() => setIsLogoutOpen(false)}
+      />
     </nav>
   );
 }

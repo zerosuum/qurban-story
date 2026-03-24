@@ -1,12 +1,15 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { useState } from "react";
+import LogoutModal from "@/components/ui/LogoutModal";
 
 export default function ProfilePage() {
   const { data: session } = useSession();
+  const [isLogoutOpen, setIsLogoutOpen] = useState(false);
 
   return (
-    <div className="w-full min-h-[calc(100vh-80px)] bg-white flex flex-col items-center pt-6">
+    <div className="w-full min-h-[calc(100vh-80px)] bg-white flex flex-col items-center pt-6 relative">
       {/* Title */}
       <div className="w-full max-w-360 px-82.5 mb-2">
         <h1 className="text-primary-700 text-[36px] font-bold leading-11.5 text-center">
@@ -69,10 +72,10 @@ export default function ProfilePage() {
 
       {/* Logout Button */}
       <button
-        onClick={() => signOut({ callbackUrl: "/" })}
+        onClick={() => setIsLogoutOpen(true)}
         className="
           w-136
-          h-10
+          h-11
           mt-6
           rounded-xl
           bg-primary-500
@@ -81,10 +84,17 @@ export default function ProfilePage() {
           flex
           items-center
           justify-center
+          hover:bg-primary-600 hover:shadow-md hover:shadow-neutral-200 active:scale-95 transition-all duration-200
         "
       >
         Keluar dari Akun
       </button>
+
+      {/* Modal */}
+      <LogoutModal
+        isOpen={isLogoutOpen}
+        onClose={() => setIsLogoutOpen(false)}
+      />
     </div>
   );
 }
