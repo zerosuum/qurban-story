@@ -8,10 +8,16 @@ export default function CtaBanner() {
       style={{ background: "linear-gradient(90deg, #044B57 0%, #021E23 100%)" }}
     >
       {/* Abstract Pattern Kiri Bawah */}
-      <div className="absolute -left-10 -bottom-10 w-16 h-16 rounded-full bg-primary-400" />
+      <div
+        className="absolute -left-[40px] -bottom-[40px] w-[128px] h-[128px] rounded-full opacity-40"
+        style={{ backgroundColor: "#1F6B78" }}
+      />
 
       {/* Abstract Pattern Kanan Atas */}
-      <div className="absolute -right-20 -top-20 w-40 h-40 rounded-full bg-primary-400" />
+      <div
+        className="absolute -right-[80px] -top-[80px] w-[256px] h-[256px] rounded-full opacity-40"
+        style={{ backgroundColor: "#1F6B78" }}
+      />
 
       {/* Teks Content */}
       <div className="flex flex-col justify-center gap-2 relative z-10 w-192.25">
