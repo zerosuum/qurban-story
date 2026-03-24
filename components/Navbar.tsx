@@ -28,10 +28,7 @@ export default function Navbar() {
           href="/"
           className="font-serif text-[24px] font-bold text-primary-500 flex items-center gap-2 hover:opacity-90 transition-opacity duration-200"
         >
-          <span className="bg-secondary-500 text-primary-700 px-2 py-0.5 rounded-md text-sm font-sans font-bold">
-            QS
-          </span>
-          Qurban Story
+          <img src="/brand.svg" alt="Qurban Story" />
         </Link>
 
         {/* Menu Tengah */}
