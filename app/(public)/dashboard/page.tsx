@@ -1,9 +1,10 @@
 "use client";
 
 import CtaBanner from "@/components/ui/CtaBanner";
+import StatusPelaporanBadge from "@/components/ui/StatusPelaporanBadge";
+import StatusPembayaranBadge from "@/components/ui/StatusPembayaranBadge";
 import TransactionCard from "@/components/ui/TransactionCard";
 import Link from "next/link";
-import StatusBadge from "@/components/ui/StatusBadge";
 
 export default function DashboardPage() {
   return (
@@ -36,7 +37,7 @@ export default function DashboardPage() {
             <span className="w-full font-sans text-[18px] font-normal leading-6.75 text-neutral-900 line-clamp-2">
               Pembayaran Transaksi Terakhir
             </span>
-            <StatusBadge status="KADALUARSA" size="sm" />
+            <StatusPembayaranBadge status="KADALUARSA" size="sm" />
           </div>
 
           {/* Card 3: Pelaporan Terakhir */}
@@ -44,7 +45,7 @@ export default function DashboardPage() {
             <span className="w-full font-sans text-[18px] font-normal leading-6.75 text-neutral-900 line-clamp-2">
               Pelaporan Transaksi Terakhir
             </span>
-            <StatusBadge status="Belum Dimulai" size="sm" />
+            <StatusPelaporanBadge status="Belum Dimulai" size="sm" />
           </div>
         </div>
 
