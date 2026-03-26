@@ -35,10 +35,9 @@ export default function RootLayout({
         className={`${publicSans.className} ${forum.variable} ${publicSans.variable} antialiased bg-cover bg-center text-neutral-800`}
       >
         <Providers>
-          <Navbar />
           {children}
         </Providers>
-        <Footer></Footer>
+
       </body>
     </html>
   );

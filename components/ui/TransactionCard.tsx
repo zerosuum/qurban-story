@@ -1,17 +1,17 @@
 import React from "react";
 import Link from "next/link";
-import StatusBadge from "./StatusBadge";
+import StatusPembayaranBadge from "./StatusPembayaranBadge";
 
 type TransactionCardProps = {
   productName: string;
   invoice: string;
   date: string;
   status:
-    | "BERHASIL"
-    | "KADALUARSA"
-    | "MENUNGGU PEMBAYARAN"
-    | "GAGAL"
-    | "BELUM DIMULAI";
+  | "BERHASIL"
+  | "KADALUARSA"
+  | "MENUNGGU PEMBAYARAN"
+  | "GAGAL"
+  | "BELUM DIMULAI";
 };
 
 export default function TransactionCard({
@@ -37,12 +37,12 @@ export default function TransactionCard({
         {/* Bagian Kiri: Info Produk & Invoice */}
         <div className="flex flex-col gap-1 items-start w-full">
           {/* Nama Produk */}
-          <h3 className="font-sans text-[18px] font-bold leading-[27px] text-neutral-900 w-full">
+          <h3 className="font-sans text-[18px] font-bold leading-6.75 text-neutral-900 w-full">
             {productName}
           </h3>
 
           {/* Invoice & Tanggal */}
-          <div className="flex items-center gap-2 font-sans text-[16px] font-medium leading-[24px] text-neutral-900">
+          <div className="flex items-center gap-2 font-sans text-[16px] font-medium leading-6 text-neutral-900">
             <span>{invoice}</span>
 
             {/* Ellipse Pemisah (Sesuai SVG Figma) */}
@@ -52,7 +52,7 @@ export default function TransactionCard({
               height="10"
               viewBox="0 0 10 10"
               fill="none"
-              className="flex-shrink-0"
+              className="shrink-0"
             >
               <circle cx="5" cy="5" r="5" fill="#F3F3F3" />
             </svg>
@@ -62,7 +62,7 @@ export default function TransactionCard({
         </div>
 
         {/* Bagian Kanan: Status Badge */}
-        <StatusBadge status={status} />
+        <StatusPembayaranBadge status={status} />
       </div>
     </Link>
   );
