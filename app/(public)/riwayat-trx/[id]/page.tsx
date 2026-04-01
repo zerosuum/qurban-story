@@ -2,27 +2,20 @@
 
 import ProgressPelaporan from "@/components/ui/ProgressPelaporan";
 import TransactionDetailCard from "@/components/ui/TransactionDetailCard";
-import Link from "next/link";
-// import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import DocumentationCard from "@/components/ui/DocumentationCard";
 import DistributionReportCard from "@/components/ui/DistributionReportCard";
 
 export default function DetailTransaksiPage() {
-  // const params = useParams();
-  // const invoiceId = params.id;
+  const router = useRouter();
 
   return (
     <div className="min-h-[calc(100vh-80px)] w-full bg-white flex flex-col items-center py-12 px-6">
-      <div className="w-full max-w-198 flex flex-col gap-6">
+      <div className="w-full max-w-[792px] flex flex-col gap-6">
         {/* Tombol Kembali */}
-        <Link
-          href="/dashboard"
-          className="
-    flex items-center gap-2
-    w-full
-    px-0 pt-6 pb-2
-    text-primary-600 font-bold text-[16px] leading-6
-  "
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 w-max px-0 pt-6 pb-2 text-[#033C46] font-bold text-[16px] leading-[24px] hover:opacity-70 transition-opacity cursor-pointer bg-transparent border-none outline-none"
         >
           {/* ICON */}
           <svg
@@ -53,14 +46,11 @@ export default function DetailTransaksiPage() {
 
           {/* TEXT */}
           <span>Kembali</span>
-        </Link>
+        </button>
 
         <TransactionDetailCard />
-
         <ProgressPelaporan />
-
         <DocumentationCard />
-
         <DistributionReportCard />
       </div>
     </div>

@@ -62,9 +62,9 @@ export default function DashboardPage() {
 
             <Link
               href="/riwayat-trx"
-              className="flex justify-center items-center h-10 px-4 py-2 gap-2.5 rounded-xl border border-primary-500 hover:bg-primary-50 transition-colors"
+              className="group flex justify-center items-center h-10 px-4 py-2 gap-2.5 rounded-xl border border-primary-500 text-primary-600 hover:bg-primary-50 hover:border-primary-600 hover:shadow-sm active:scale-95 transition-all duration-200"
             >
-              <span className="font-sans font-medium text-[16px] text-primary-600">
+              <span className="font-sans font-bold text-[16px]">
                 Selengkapnya
               </span>
 
@@ -74,7 +74,7 @@ export default function DashboardPage() {
                 height="24"
                 viewBox="0 0 24 24"
                 fill="none"
-                className="w-6 h-6 shrink-0"
+                className="w-6 h-6 shrink-0 transition-transform duration-200 group-hover:translate-x-1"
               >
                 <mask
                   id="mask0_538_10284"
@@ -97,7 +97,7 @@ export default function DashboardPage() {
                 <g mask="url(#mask0_538_10284)">
                   <path
                     d="M14 6L20 12L14 18L12.6 16.55L16.15 13L4 13V11L16.15 11L12.6 7.45L14 6Z"
-                    fill="#033C46"
+                    fill="currentColor"
                   />
                 </g>
               </svg>
