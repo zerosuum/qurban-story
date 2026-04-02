@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import FilterPelaporan from "./FilterPelaporan";
 import FilterPembayaran from "./FilterPembayaran";
 import Pagination from "./Pagination";
@@ -12,6 +12,7 @@ type PaymentStatus = "BERHASIL" | "GAGAL" | "KADALUARSA" | "TERTUNDA";
 type ReportingStatus = "Tahap 1/3" | "Tahap 2/3" | "Selesai" | "Belum Dimulai";
 
 type TransactionRow = {
+    id: string;
     invoice: string;
     customer: string;
     produk: string;
@@ -21,144 +22,108 @@ type TransactionRow = {
     pelaporan: ReportingStatus;
 };
 
-const transactionData: TransactionRow[] = [
-    {
-        invoice: "INV-2026-001",
-        customer: "Siti Aisyah",
-        produk: "Kambing Premium",
-        tanggal: "15-03-2026",
-        nominal: "3.200.000",
-        pembayaran: "BERHASIL",
-        pelaporan: "Tahap 1/3",
-    },
-    {
-        invoice: "INV-2026-002",
-        customer: "Siti Aisyah",
-        produk: "Kambing Premium",
-        tanggal: "19-03-2026",
-        nominal: "3.200.000",
-        pembayaran: "KADALUARSA",
-        pelaporan: "Belum Dimulai",
-    },
-    {
-        invoice: "INV-2026-003",
-        customer: "Siti Aisyah",
-        produk: "Sapi Brahmana",
-        tanggal: "16-03-2026",
-        nominal: "25.000.000",
-        pembayaran: "BERHASIL",
-        pelaporan: "Tahap 1/3",
-    },
-    {
-        invoice: "INV-2026-004",
-        customer: "Siti Aisyah",
-        produk: "Domba Pilihan",
-        tanggal: "16-03-2026",
-        nominal: "2.800.000",
-        pembayaran: "GAGAL",
-        pelaporan: "Belum Dimulai",
-    },
-    {
-        invoice: "INV-2026-005",
-        customer: "Dewi Lestari",
-        produk: "Sapi Limosin (Patungan)",
-        tanggal: "17-03-2026",
-        nominal: "28.000.000",
-        pembayaran: "TERTUNDA",
-        pelaporan: "Belum Dimulai",
-    },
-    {
-        invoice: "INV-2026-006",
-        customer: "Budi Santoso",
-        produk: "Kambing Premium",
-        tanggal: "18-03-2026",
-        nominal: "3.200.000",
-        pembayaran: "TERTUNDA",
-        pelaporan: "Belum Dimulai",
-    },
-    {
-        invoice: "INV-2026-007",
-        customer: "Nurul Huda",
-        produk: "Sapi Limosin (Patungan)",
-        tanggal: "18-03-2026",
-        nominal: "4.000.000",
-        pembayaran: "BERHASIL",
-        pelaporan: "Belum Dimulai",
-    },
-    {
-        invoice: "INV-2026-008",
-        customer: "Fajar Setiawan",
-        produk: "Domba Pilihan",
-        tanggal: "19-03-2026",
-        nominal: "2.800.000",
-        pembayaran: "GAGAL",
-        pelaporan: "Belum Dimulai",
-    },
-    {
-        invoice: "INV-2026-009",
-        customer: "Siti Aisyah",
-        produk: "Sapi Limosin (Patungan)",
-        tanggal: "15-03-2026",
-        nominal: "4.000.000",
-        pembayaran: "TERTUNDA",
-        pelaporan: "Belum Dimulai",
-    },
-    {
-        invoice: "INV-2026-010",
-        customer: "Hendra Saputra",
-        produk: "Kambing Super",
-        tanggal: "20-03-2026",
-        nominal: "4.200.000",
-        pembayaran: "BERHASIL",
-        pelaporan: "Tahap 2/3",
-    },
-];
+type TransactionSummary = {
+    total: number;
+    berhasil: number;
+    tertunda: number;
+    gagal: number;
+};
+
+type TransactionsApiResponse = {
+    data: TransactionRow[];
+    summary: TransactionSummary;
+    pagination: {
+        page: number;
+        pageSize: number;
+        total: number;
+        totalPages: number;
+    };
+};
+
+type TransactionTableProps = {
+    onSummaryChange?: (summary: TransactionSummary) => void;
+};
 
 const PAGE_SIZE = 10;
 
-export default function TransactionTable() {
+function formatRupiah(value: string) {
+    const number = Number(value);
+    if (Number.isNaN(number)) return value;
+    return new Intl.NumberFormat("id-ID").format(number);
+}
+
+export default function TransactionTable({ onSummaryChange }: TransactionTableProps) {
+    const [rows, setRows] = useState<TransactionRow[]>([]);
     const [search, setSearch] = useState("");
     const [paymentFilter, setPaymentFilter] = useState<PaymentStatus | "Semua Pembayaran">("Semua Pembayaran");
     const [reportFilter, setReportFilter] = useState<ReportingStatus | "Semua Pelaporan">("Semua Pelaporan");
     const [page, setPage] = useState(1);
-
-    const filteredData = useMemo(() => {
-        const keyword = search.toLowerCase().trim();
-
-        return transactionData.filter((item) => {
-            const matchesSearch =
-                keyword.length === 0 ||
-                item.invoice.toLowerCase().includes(keyword) ||
-                item.customer.toLowerCase().includes(keyword) ||
-                item.produk.toLowerCase().includes(keyword);
-
-            const matchesPayment =
-                paymentFilter === "Semua Pembayaran" ||
-                item.pembayaran === paymentFilter;
-
-            const matchesReport =
-                reportFilter === "Semua Pelaporan" ||
-                item.pelaporan === reportFilter;
-
-            return matchesSearch && matchesPayment && matchesReport;
-        });
-    }, [search, paymentFilter, reportFilter]);
-
-    const totalPages = Math.max(1, Math.ceil(filteredData.length / PAGE_SIZE));
-
-    const paginatedData = useMemo(() => {
-        const start = (page - 1) * PAGE_SIZE;
-        return filteredData.slice(start, start + PAGE_SIZE);
-    }, [filteredData, page]);
+    const [totalPages, setTotalPages] = useState(1);
+    const [isLoading, setIsLoading] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
 
     const goPrev = () => setPage((prev) => Math.max(1, prev - 1));
     const goNext = () => setPage((prev) => Math.min(totalPages, prev + 1));
 
     useEffect(() => {
-        if (page > totalPages) {
-            setPage(totalPages);
-        }
-    }, [page, totalPages]);
+        setPage(1);
+    }, [search, paymentFilter, reportFilter]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        const fetchTransactions = async () => {
+            setIsLoading(true);
+            setFetchError(null);
+
+            try {
+                const query = new URLSearchParams({
+                    page: String(page),
+                    pageSize: String(PAGE_SIZE),
+                });
+
+                if (search.trim()) {
+                    query.set("search", search.trim());
+                }
+
+                if (paymentFilter !== "Semua Pembayaran") {
+                    query.set("payment", paymentFilter);
+                }
+
+                if (reportFilter !== "Semua Pelaporan") {
+                    query.set("report", reportFilter);
+                }
+
+                const response = await fetch(`/api/transactions?${query.toString()}`, {
+                    signal: controller.signal,
+                });
+
+                if (!response.ok) {
+                    throw new Error("Gagal mengambil data transaksi.");
+                }
+
+                const result = (await response.json()) as TransactionsApiResponse;
+
+                setRows(result.data);
+                setTotalPages(Math.max(1, result.pagination.totalPages ?? 1));
+                onSummaryChange?.(result.summary);
+            } catch (error) {
+                if ((error as Error).name === "AbortError") {
+                    return;
+                }
+
+                setRows([]);
+                setFetchError("Data transaksi gagal dimuat.");
+                onSummaryChange?.({ total: 0, berhasil: 0, tertunda: 0, gagal: 0 });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchTransactions();
+
+        return () => controller.abort();
+    }, [page, search, paymentFilter, reportFilter, onSummaryChange]);
 
     return (
         <section className="w-full rounded-xl border border-neutral-100 bg-white p-5">
@@ -208,13 +173,13 @@ export default function TransactionTable() {
                     </thead>
 
                     <tbody className="bg-white">
-                        {paginatedData.map((item) => (
-                            <tr key={item.invoice} className="border-t border-neutral-50">
+                        {rows.map((item) => (
+                            <tr key={item.id} className="border-t border-neutral-50">
                                 <td className="px-4 py-3 text-neutral-900">{item.invoice}</td>
                                 <td className="px-4 py-3 text-neutral-900">{item.customer}</td>
                                 <td className="px-4 py-3 text-neutral-900">{item.produk}</td>
                                 <td className="px-4 py-3 text-neutral-900">{item.tanggal}</td>
-                                <td className="px-4 py-3 text-neutral-900">{item.nominal}</td>
+                                <td className="px-4 py-3 text-neutral-900">{formatRupiah(item.nominal)}</td>
                                 <td className="px-4 py-3">
                                     <StatusPembayaranBadge status={item.pembayaran} size="sm" />
                                 </td>
@@ -223,7 +188,7 @@ export default function TransactionTable() {
                                 </td>
                                 <td className="px-4 py-3">
                                     <div className="flex justify-center">
-                                        <button className="text-primary-600 hover:opacity-80" aria-label={`Lihat ${item.invoice}`}>
+                                        <button type="button" className="cursor-pointer text-primary-600 hover:opacity-80" aria-label={`Lihat ${item.invoice}`}>
                                             <svg
                                                 width="20"
                                                 height="20"
@@ -241,7 +206,23 @@ export default function TransactionTable() {
                             </tr>
                         ))}
 
-                        {paginatedData.length === 0 && (
+                        {isLoading && (
+                            <tr>
+                                <td colSpan={8} className="px-4 py-6 text-center text-neutral-400">
+                                    Memuat data transaksi...
+                                </td>
+                            </tr>
+                        )}
+
+                        {!isLoading && fetchError && (
+                            <tr>
+                                <td colSpan={8} className="px-4 py-6 text-center text-red-400">
+                                    {fetchError}
+                                </td>
+                            </tr>
+                        )}
+
+                        {!isLoading && !fetchError && rows.length === 0 && (
                             <tr>
                                 <td colSpan={8} className="px-4 py-6 text-center text-neutral-400">
                                     Data transaksi tidak ditemukan.

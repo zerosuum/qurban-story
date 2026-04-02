@@ -8,8 +8,8 @@ export default function Sidebar() {
 
     const menus = [
         { name: "Dashboard", href: "/admin/dashboard", icons: "dashboard" },
-        { name: "Transaksi", href: "/admin/dashboard/transaksi", icons: "request_quote" },
-        { name: "Produk", href: "/admin/dashboard/produk", icons: "shopping_bag" },
+        { name: "Transaksi", href: "/admin/transaksi", icons: "request_quote" },
+        { name: "Produk", href: "/admin/product", icons: "shopping_bag" },
         { name: "Customer", href: "/admin/dashboard/customer", icons: "customer" },
         { name: "Manajemen Admin", href: "/admin/dashboard/manajemen-admin", icons: "admin_panel_settings" },
         { name: "Dokumentasi Distribusi", href: "/admin/dashboard/dokumentasi-distribusi", icons: "videocam" },

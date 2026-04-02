@@ -28,7 +28,7 @@ export default function SearchBar({
                 value={value}
                 onChange={(event) => onChange(event.target.value)}
                 placeholder={placeholder}
-                className="h-10 w-full min-w-115.5 rounded-xl border border-neutral-100 bg-white pl-10 pr-3 text-sm text-neutral-500 outline-none focus:border-primary-500 placeholder:italic"
+                className="h-10 w-full min-w-0 md:min-w-115.5 rounded-xl border border-neutral-100 bg-white pl-10 pr-3 text-sm text-neutral-500 outline-none focus:border-primary-500 placeholder:italic"
             />
         </div>
     );
