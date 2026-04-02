@@ -2,8 +2,12 @@
 
 import ProgressPelaporan from "@/components/ui/ProgressPelaporan";
 import TransactionDetailCard from "@/components/ui/TransactionDetailCard";
+<<<<<<< HEAD:app/riwayat-trx/[id]/page.tsx
 import Link from "next/link";
 import { useParams } from "next/navigation";
+=======
+import { useRouter } from "next/navigation";
+>>>>>>> 6a1daf19ac949e774a6e73c6bb5643a69213da43:app/(public)/riwayat-trx/[id]/page.tsx
 import DocumentationCard from "@/components/ui/DocumentationCard";
 import DistributionReportCard from "@/components/ui/DistributionReportCard";
 import { useEffect, useState } from "react";
@@ -21,6 +25,7 @@ type DetailResponse = {
 };
 
 export default function DetailTransaksiPage() {
+<<<<<<< HEAD:app/riwayat-trx/[id]/page.tsx
   const params = useParams<{ id: string }>();
   const [documentation, setDocumentation] = useState<TransactionDocumentation>({
     photoUrls: [],
@@ -54,19 +59,17 @@ export default function DetailTransaksiPage() {
       active = false;
     };
   }, [params?.id]);
+=======
+  const router = useRouter();
+>>>>>>> 6a1daf19ac949e774a6e73c6bb5643a69213da43:app/(public)/riwayat-trx/[id]/page.tsx
 
   return (
     <div className="min-h-[calc(100vh-80px)] w-full bg-white flex flex-col items-center py-12 px-6">
-      <div className="w-full max-w-198 flex flex-col gap-6">
+      <div className="w-full max-w-[792px] flex flex-col gap-6">
         {/* Tombol Kembali */}
-        <Link
-          href="/dashboard"
-          className="
-    flex items-center gap-2
-    w-full
-    px-0 pt-6 pb-2
-    text-primary-600 font-bold text-[16px] leading-6
-  "
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 w-max px-0 pt-6 pb-2 text-[#033C46] font-bold text-[16px] leading-[24px] hover:opacity-70 transition-opacity cursor-pointer bg-transparent border-none outline-none"
         >
           {/* ICON */}
           <svg
@@ -97,17 +100,20 @@ export default function DetailTransaksiPage() {
 
           {/* TEXT */}
           <span>Kembali</span>
-        </Link>
+        </button>
 
         <TransactionDetailCard />
-
         <ProgressPelaporan />
+<<<<<<< HEAD:app/riwayat-trx/[id]/page.tsx
 
         <DocumentationCard
           photoUrls={documentation.photoUrls}
           videoUrl={documentation.videoUrl}
         />
 
+=======
+        <DocumentationCard />
+>>>>>>> 6a1daf19ac949e774a6e73c6bb5643a69213da43:app/(public)/riwayat-trx/[id]/page.tsx
         <DistributionReportCard />
       </div>
     </div>
