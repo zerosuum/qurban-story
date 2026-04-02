@@ -94,7 +94,7 @@ export default function DashboardPage() {
                     <DashboardCard title="Tanpa Dokumentasi" value={formatNumber(metrics.tanpaDokumentasi)} variant="red" />
                 </div>
                 <div className="w-full rounded-xl border border-neutral-200 p-6 flex flex-col gap-4 h-fit bg-white">
-                    <h5 className="font-bold text-xl">Progress Pelaporan</h5>
+                    <h5 className="font-bold text-2xl">Progress Pelaporan</h5>
                     <div>
                         <div className="w-full flex flex-col gap-2">
                             <div className="flex flex-row items-center justify-between w-full font-semibold text-primary-500">
@@ -121,7 +121,7 @@ export default function DashboardPage() {
                         </div>
                     </div>
                 </div>
-                <TransactionTable />
+                <TransactionTable mode="dashboard" />
             </div>
         </main>
     );

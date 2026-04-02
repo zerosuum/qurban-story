@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
     getDashboardTransactionMetrics,
+    getTransactionById,
     listTransactions,
 } from "@/lib/transactions/transaction.service";
 
@@ -50,6 +51,21 @@ export async function handleGetDashboardTransactionMetrics() {
         return NextResponse.json({ data }, { status: 200 });
     } catch (error) {
         const message = error instanceof Error ? error.message : "Gagal mengambil ringkasan dashboard.";
+        return NextResponse.json({ message }, { status: 500 });
+    }
+}
+
+export async function handleGetTransactionById(id: string) {
+    try {
+        const data = await getTransactionById(id);
+
+        if (!data) {
+            return NextResponse.json({ message: "Transaksi tidak ditemukan." }, { status: 404 });
+        }
+
+        return NextResponse.json({ data }, { status: 200 });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Gagal mengambil detail transaksi.";
         return NextResponse.json({ message }, { status: 500 });
     }
 }

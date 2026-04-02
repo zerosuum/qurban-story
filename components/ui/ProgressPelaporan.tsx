@@ -84,7 +84,7 @@ export default function ProgressPelaporan() {
     // Container Utama (w: 792px, p: 24px, rounded: 12px, border, shadow)
     <div className="flex flex-col items-start w-full max-w-[792px] p-6 rounded-xl border border-neutral-200 bg-white shadow-[0_2px_4px_-2px_rgba(24,39,75,0.12),0_4px_4px_-2px_rgba(24,39,75,0.08)]">
       {/* Judul Box */}
-      <h2 className="font-sans text-[20px] font-bold leading-[26px] text-neutral-900 mb-6">
+      <h2 className="font-sans text-2xl font-bold leading-[26px] text-neutral-900 mb-6">
         Progress Pelaporan
       </h2>
 

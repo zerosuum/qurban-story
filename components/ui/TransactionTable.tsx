@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import FilterPelaporan from "./FilterPelaporan";
 import FilterPembayaran from "./FilterPembayaran";
-import Pagination from "./Pagination";
 import SearchBar from "./SearchBar";
 import StatusPelaporanBadge from "./StatusPelaporanBadge";
 import StatusPembayaranBadge from "./StatusPembayaranBadge";
+import ConfirmationPopup from "./ConfirmationPopup";
+import UpdatePelaporanModal from "./UpdatePelaporanModal";
 
 type PaymentStatus = "BERHASIL" | "GAGAL" | "KADALUARSA" | "TERTUNDA";
 type ReportingStatus = "Tahap 1/3" | "Tahap 2/3" | "Selesai" | "Belum Dimulai";
@@ -32,6 +34,7 @@ type TransactionSummary = {
 type TransactionsApiResponse = {
     data: TransactionRow[];
     summary: TransactionSummary;
+    isFallbackData?: boolean;
     pagination: {
         page: number;
         pageSize: number;
@@ -42,6 +45,7 @@ type TransactionsApiResponse = {
 
 type TransactionTableProps = {
     onSummaryChange?: (summary: TransactionSummary) => void;
+    mode?: "dashboard" | "transaksi";
 };
 
 const PAGE_SIZE = 10;
@@ -52,7 +56,7 @@ function formatRupiah(value: string) {
     return new Intl.NumberFormat("id-ID").format(number);
 }
 
-export default function TransactionTable({ onSummaryChange }: TransactionTableProps) {
+export default function TransactionTable({ onSummaryChange, mode = "dashboard" }: TransactionTableProps) {
     const [rows, setRows] = useState<TransactionRow[]>([]);
     const [search, setSearch] = useState("");
     const [paymentFilter, setPaymentFilter] = useState<PaymentStatus | "Semua Pembayaran">("Semua Pembayaran");
@@ -61,6 +65,17 @@ export default function TransactionTable({ onSummaryChange }: TransactionTablePr
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [showSelectionWarning, setShowSelectionWarning] = useState(false);
+    const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false);
+    const [tahap2Date, setTahap2Date] = useState("");
+    const [tahap3Date, setTahap3Date] = useState("");
+
+    const isTransaksiMode = mode === "transaksi";
+    const allSelected = rows.length > 0 && rows.every((row) => selectedIds.includes(row.id));
+    const colSpan = isTransaksiMode ? 8 : 8;
 
     const goPrev = () => setPage((prev) => Math.max(1, prev - 1));
     const goNext = () => setPage((prev) => Math.min(totalPages, prev + 1));
@@ -68,6 +83,22 @@ export default function TransactionTable({ onSummaryChange }: TransactionTablePr
     useEffect(() => {
         setPage(1);
     }, [search, paymentFilter, reportFilter]);
+
+    useEffect(() => {
+        setSelectedIds((prev) => prev.filter((id) => rows.some((row) => row.id === id)));
+    }, [rows]);
+
+    useEffect(() => {
+        if (!showSelectionWarning) {
+            return;
+        }
+
+        const timer = window.setTimeout(() => {
+            setShowSelectionWarning(false);
+        }, 3200);
+
+        return () => window.clearTimeout(timer);
+    }, [showSelectionWarning]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -125,14 +156,63 @@ export default function TransactionTable({ onSummaryChange }: TransactionTablePr
         return () => controller.abort();
     }, [page, search, paymentFilter, reportFilter, onSummaryChange]);
 
+    const toggleSelectAll = () => {
+        if (allSelected) {
+            setSelectedIds([]);
+            return;
+        }
+
+        setSelectedIds(rows.map((row) => row.id));
+    };
+
+    const toggleSelectRow = (id: string) => {
+        setSelectedIds((prev) => {
+            if (prev.includes(id)) {
+                return prev.filter((item) => item !== id);
+            }
+
+            return [...prev, id];
+        });
+    };
+
+    const handleUpdatePelaporan = () => {
+        if (selectedIds.length === 0) {
+            setShowSelectionWarning(true);
+            return;
+        }
+
+        setShowSelectionWarning(false);
+        setIsProgressModalOpen(true);
+    };
+
+    const handleOpenConfirmUpdate = () => {
+        setIsProgressModalOpen(false);
+        setIsConfirmOpen(true);
+    };
+
+    const handleConfirmUpdate = async () => {
+        setIsSubmittingUpdate(true);
+
+        await new Promise((resolve) => setTimeout(resolve, 600));
+
+        setIsSubmittingUpdate(false);
+        setIsConfirmOpen(false);
+        setSelectedIds([]);
+        setTahap2Date("");
+        setTahap3Date("");
+    };
+
     return (
         <section className="w-full rounded-xl border border-neutral-100 bg-white p-5">
             <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <h2 className="text-xl leading-10 font-bold text-black">Semua Transaksi</h2>
+                {!isTransaksiMode && <h2 className="text-xl leading-10 font-bold text-black">Semua Transaksi</h2>}
 
-                <div className="flex flex-col gap-2 md:flex-row">
+                <div className="flex w-full flex-col gap-2 md:flex-row md:items-center">
                     <SearchBar
                         value={search}
+                        className="md:flex-1"
+                        inputClassName="md:min-w-0"
+                        placeholder="Cari invoice, customer, atau produk..."
                         onChange={(value) => {
                             setSearch(value);
                             setPage(1);
@@ -154,6 +234,16 @@ export default function TransactionTable({ onSummaryChange }: TransactionTablePr
                             setPage(1);
                         }}
                     />
+
+                    {isTransaksiMode && (
+                        <button
+                            type="button"
+                            onClick={handleUpdatePelaporan}
+                            className="h-10 cursor-pointer rounded-xl bg-primary-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-primary-600"
+                        >
+                            Update Pelaporan
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -161,7 +251,19 @@ export default function TransactionTable({ onSummaryChange }: TransactionTablePr
                 <table className="w-full min-w-260 border-collapse">
                     <thead>
                         <tr className="bg-primary-500 text-left text-white">
-                            <th className="px-4 py-3 font-semibold">Invoice</th>
+                            <th className="px-4 py-3 font-semibold">
+                                <div className="flex items-center gap-2">
+                                    {isTransaksiMode && (
+                                        <input
+                                            type="checkbox"
+                                            checked={allSelected}
+                                            onChange={toggleSelectAll}
+                                            className="h-4 w-4 cursor-pointer rounded border-neutral-300 accent-[#F2C879]"
+                                        />
+                                    )}
+                                    <span>Invoice</span>
+                                </div>
+                            </th>
                             <th className="px-4 py-3 font-semibold">Customer</th>
                             <th className="px-4 py-3 font-semibold">Produk</th>
                             <th className="px-4 py-3 font-semibold">Tanggal</th>
@@ -175,7 +277,19 @@ export default function TransactionTable({ onSummaryChange }: TransactionTablePr
                     <tbody className="bg-white">
                         {rows.map((item) => (
                             <tr key={item.id} className="border-t border-neutral-50">
-                                <td className="px-4 py-3 text-neutral-900">{item.invoice}</td>
+                                <td className="px-4 py-3 text-neutral-900">
+                                    <div className="flex items-center gap-2">
+                                        {isTransaksiMode && (
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.includes(item.id)}
+                                                onChange={() => toggleSelectRow(item.id)}
+                                                className="h-4 w-4 cursor-pointer rounded border-neutral-300 accent-[#F2C879]"
+                                            />
+                                        )}
+                                        <span>{item.invoice}</span>
+                                    </div>
+                                </td>
                                 <td className="px-4 py-3 text-neutral-900">{item.customer}</td>
                                 <td className="px-4 py-3 text-neutral-900">{item.produk}</td>
                                 <td className="px-4 py-3 text-neutral-900">{item.tanggal}</td>
@@ -188,7 +302,7 @@ export default function TransactionTable({ onSummaryChange }: TransactionTablePr
                                 </td>
                                 <td className="px-4 py-3">
                                     <div className="flex justify-center">
-                                        <button type="button" className="cursor-pointer text-primary-600 hover:opacity-80" aria-label={`Lihat ${item.invoice}`}>
+                                        <Link href={`/admin/transaksi/${item.id}`} className="cursor-pointer text-[#2D7A5B] hover:opacity-80" aria-label={`Lihat ${item.invoice}`}>
                                             <svg
                                                 width="20"
                                                 height="20"
@@ -200,7 +314,7 @@ export default function TransactionTable({ onSummaryChange }: TransactionTablePr
                                                 <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
                                                 <circle cx="12" cy="12" r="3" />
                                             </svg>
-                                        </button>
+                                        </Link>
                                     </div>
                                 </td>
                             </tr>
@@ -208,7 +322,7 @@ export default function TransactionTable({ onSummaryChange }: TransactionTablePr
 
                         {isLoading && (
                             <tr>
-                                <td colSpan={8} className="px-4 py-6 text-center text-neutral-400">
+                                <td colSpan={colSpan} className="px-4 py-6 text-center text-neutral-400">
                                     Memuat data transaksi...
                                 </td>
                             </tr>
@@ -216,7 +330,7 @@ export default function TransactionTable({ onSummaryChange }: TransactionTablePr
 
                         {!isLoading && fetchError && (
                             <tr>
-                                <td colSpan={8} className="px-4 py-6 text-center text-red-400">
+                                <td colSpan={colSpan} className="px-4 py-6 text-center text-red-400">
                                     {fetchError}
                                 </td>
                             </tr>
@@ -224,7 +338,7 @@ export default function TransactionTable({ onSummaryChange }: TransactionTablePr
 
                         {!isLoading && !fetchError && rows.length === 0 && (
                             <tr>
-                                <td colSpan={8} className="px-4 py-6 text-center text-neutral-400">
+                                <td colSpan={colSpan} className="px-4 py-6 text-center text-neutral-400">
                                     Data transaksi tidak ditemukan.
                                 </td>
                             </tr>
@@ -233,11 +347,68 @@ export default function TransactionTable({ onSummaryChange }: TransactionTablePr
                 </table>
             </div>
 
-            <Pagination
-                page={page}
-                totalPages={totalPages}
-                onPrev={goPrev}
-                onNext={goNext}
+            <div className="mt-4 flex items-center justify-between gap-4">
+                <p className="text-sm text-neutral-700">
+                    {isTransaksiMode && selectedIds.length > 0 ? `${selectedIds.length} transaksi dipilih` : ""}
+                </p>
+
+                <div className="flex items-center justify-end gap-6">
+                    <button
+                        type="button"
+                        onClick={goPrev}
+                        disabled={page === 1}
+                        className="h-9 w-9 cursor-pointer rounded-xl border border-primary-500 text-primary-600 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        <span aria-hidden="true">←</span>
+                    </button>
+
+                    <p className="text-md text-black">
+                        Halaman {page} dari {totalPages}
+                    </p>
+
+                    <button
+                        type="button"
+                        onClick={goNext}
+                        disabled={page === totalPages}
+                        className="h-9 w-9 cursor-pointer rounded-xl border border-primary-500 text-primary-600 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        <span aria-hidden="true">→</span>
+                    </button>
+                </div>
+            </div>
+
+            {isTransaksiMode && showSelectionWarning && (
+                <div className="fixed bottom-5 right-5 z-[120] w-[min(560px,calc(100vw-2rem))] rounded-xl border border-[#E67E22] bg-[#FFF4E5] px-5 py-4 text-[#E67E22] shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#E67E22] text-base font-bold">!</span>
+                        <div>
+                            <p className="font-bold">Tidak ada transaksi yang dipilih</p>
+                            <p className="mt-1">Silakan pilih minimal 1 transaksi untuk memperbarui pelaporan.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <UpdatePelaporanModal
+                isOpen={isTransaksiMode && isProgressModalOpen}
+                selectedCount={selectedIds.length}
+                tahap2Date={tahap2Date}
+                tahap3Date={tahap3Date}
+                onChangeTahap2Date={setTahap2Date}
+                onChangeTahap3Date={setTahap3Date}
+                onClose={() => setIsProgressModalOpen(false)}
+                onApply={handleOpenConfirmUpdate}
+            />
+
+            <ConfirmationPopup
+                isOpen={isConfirmOpen}
+                title="Konfirmasi"
+                message="Apakah Anda yakin ingin menyimpan pembaruan status pelaporan ini?"
+                confirmLabel="Ya, Simpan"
+                cancelLabel="Batal"
+                isLoading={isSubmittingUpdate}
+                onCancel={() => setIsConfirmOpen(false)}
+                onConfirm={() => void handleConfirmUpdate()}
             />
         </section>
     );

@@ -3,13 +3,57 @@
 import ProgressPelaporan from "@/components/ui/ProgressPelaporan";
 import TransactionDetailCard from "@/components/ui/TransactionDetailCard";
 import Link from "next/link";
-// import { useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import DocumentationCard from "@/components/ui/DocumentationCard";
 import DistributionReportCard from "@/components/ui/DistributionReportCard";
+import { useEffect, useState } from "react";
+
+type TransactionDocumentation = {
+  photoUrls: string[];
+  videoUrl: string | null;
+};
+
+type DetailResponse = {
+  data: {
+    id: string;
+    documentation: TransactionDocumentation;
+  };
+};
 
 export default function DetailTransaksiPage() {
-  // const params = useParams();
-  // const invoiceId = params.id;
+  const params = useParams<{ id: string }>();
+  const [documentation, setDocumentation] = useState<TransactionDocumentation>({
+    photoUrls: [],
+    videoUrl: null,
+  });
+
+  useEffect(() => {
+    const id = params?.id;
+    if (!id) return;
+
+    let active = true;
+
+    const loadDetail = async () => {
+      try {
+        const response = await fetch(`/api/transactions/${id}`);
+        if (!response.ok) return;
+
+        const payload = (await response.json()) as DetailResponse;
+        if (!active) return;
+
+        setDocumentation(payload.data.documentation ?? { photoUrls: [], videoUrl: null });
+      } catch {
+        if (!active) return;
+        setDocumentation({ photoUrls: [], videoUrl: null });
+      }
+    };
+
+    void loadDetail();
+
+    return () => {
+      active = false;
+    };
+  }, [params?.id]);
 
   return (
     <div className="min-h-[calc(100vh-80px)] w-full bg-white flex flex-col items-center py-12 px-6">
@@ -59,7 +103,10 @@ export default function DetailTransaksiPage() {
 
         <ProgressPelaporan />
 
-        <DocumentationCard />
+        <DocumentationCard
+          photoUrls={documentation.photoUrls}
+          videoUrl={documentation.videoUrl}
+        />
 
         <DistributionReportCard />
       </div>
