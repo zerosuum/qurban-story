@@ -2,14 +2,9 @@
 
 import ProgressPelaporan from "@/components/ui/ProgressPelaporan";
 import TransactionDetailCard from "@/components/ui/TransactionDetailCard";
-<<<<<<< HEAD:app/riwayat-trx/[id]/page.tsx
-import Link from "next/link";
-import { useParams } from "next/navigation";
-=======
-import { useRouter } from "next/navigation";
->>>>>>> 6a1daf19ac949e774a6e73c6bb5643a69213da43:app/(public)/riwayat-trx/[id]/page.tsx
 import DocumentationCard from "@/components/ui/DocumentationCard";
 import DistributionReportCard from "@/components/ui/DistributionReportCard";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type TransactionDocumentation = {
@@ -25,8 +20,9 @@ type DetailResponse = {
 };
 
 export default function DetailTransaksiPage() {
-<<<<<<< HEAD:app/riwayat-trx/[id]/page.tsx
   const params = useParams<{ id: string }>();
+  const router = useRouter();
+
   const [documentation, setDocumentation] = useState<TransactionDocumentation>({
     photoUrls: [],
     videoUrl: null,
@@ -46,7 +42,9 @@ export default function DetailTransaksiPage() {
         const payload = (await response.json()) as DetailResponse;
         if (!active) return;
 
-        setDocumentation(payload.data.documentation ?? { photoUrls: [], videoUrl: null });
+        setDocumentation(
+          payload.data.documentation ?? { photoUrls: [], videoUrl: null },
+        );
       } catch {
         if (!active) return;
         setDocumentation({ photoUrls: [], videoUrl: null });
@@ -59,9 +57,6 @@ export default function DetailTransaksiPage() {
       active = false;
     };
   }, [params?.id]);
-=======
-  const router = useRouter();
->>>>>>> 6a1daf19ac949e774a6e73c6bb5643a69213da43:app/(public)/riwayat-trx/[id]/page.tsx
 
   return (
     <div className="min-h-[calc(100vh-80px)] w-full bg-white flex flex-col items-center py-12 px-6">
@@ -97,23 +92,17 @@ export default function DetailTransaksiPage() {
               />
             </g>
           </svg>
-
-          {/* TEXT */}
           <span>Kembali</span>
         </button>
 
         <TransactionDetailCard />
         <ProgressPelaporan />
-<<<<<<< HEAD:app/riwayat-trx/[id]/page.tsx
 
         <DocumentationCard
           photoUrls={documentation.photoUrls}
           videoUrl={documentation.videoUrl}
         />
 
-=======
-        <DocumentationCard />
->>>>>>> 6a1daf19ac949e774a6e73c6bb5643a69213da43:app/(public)/riwayat-trx/[id]/page.tsx
         <DistributionReportCard />
       </div>
     </div>

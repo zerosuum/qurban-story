@@ -1,12 +1,61 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import CtaBanner from "@/components/ui/CtaBanner";
-import StatusPelaporanBadge from "@/components/ui/StatusPelaporanBadge";
-import StatusPembayaranBadge from "@/components/ui/StatusPembayaranBadge";
+import StatusPelaporanBadge, {
+  PelaporanStatus,
+} from "@/components/ui/StatusPelaporanBadge";
+import StatusPembayaranBadge, {
+  PembayaranStatus,
+} from "@/components/ui/StatusPembayaranBadge";
 import TransactionCard from "@/components/ui/TransactionCard";
 import Link from "next/link";
 
+type TransactionRow = {
+  id: string;
+  invoice: string;
+  produk: string;
+  tanggal: string;
+  pembayaran: PembayaranStatus;
+  pelaporan: PelaporanStatus;
+};
+
 export default function DashboardPage() {
+  const [transactions, setTransactions] = useState<TransactionRow[]>([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    lastPayment: "Belum Dimulai" as PembayaranStatus | "Belum Dimulai",
+    lastReport: "Belum Dimulai" as PelaporanStatus,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardTrx = async () => {
+      try {
+        const res = await fetch("/api/transactions?pageSize=3");
+        if (!res.ok) return;
+        const json = await res.json();
+
+        const trxs = json.data || [];
+        setTransactions(trxs);
+
+        if (trxs.length > 0) {
+          setStats({
+            total: json.summary?.total || trxs.length,
+            lastPayment: trxs[0].pembayaran,
+            lastReport: trxs[0].pelaporan,
+          });
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void fetchDashboardTrx();
+  }, []);
+
   return (
     <div className="min-h-[calc(100vh-80px)] w-full bg-white flex flex-col items-center py-12 px-6">
       <div className="w-full max-w-249 flex flex-col gap-8">
@@ -28,7 +77,7 @@ export default function DashboardPage() {
               Total Transaksi
             </span>
             <span className="font-sans text-[18px] font-bold leading-6.75 text-neutral-900">
-              5
+              {isLoading ? "..." : stats.total}
             </span>
           </div>
 
@@ -37,7 +86,18 @@ export default function DashboardPage() {
             <span className="w-full font-sans text-[18px] font-normal leading-6.75 text-neutral-900 line-clamp-2">
               Pembayaran Transaksi Terakhir
             </span>
-            <StatusPembayaranBadge status="KADALUARSA" size="sm" />
+            {isLoading ? (
+              <span className="text-sm text-neutral-400 font-semibold">
+                ...
+              </span>
+            ) : stats.lastPayment !== "Belum Dimulai" ? (
+              <StatusPembayaranBadge
+                status={stats.lastPayment as PembayaranStatus}
+                size="sm"
+              />
+            ) : (
+              <span className="text-sm text-neutral-400 font-semibold">-</span>
+            )}
           </div>
 
           {/* Card 3: Pelaporan Terakhir */}
@@ -45,7 +105,15 @@ export default function DashboardPage() {
             <span className="w-full font-sans text-[18px] font-normal leading-6.75 text-neutral-900 line-clamp-2">
               Pelaporan Transaksi Terakhir
             </span>
-            <StatusPelaporanBadge status="Belum Dimulai" size="sm" />
+            {isLoading ? (
+              <span className="text-sm text-neutral-400 font-semibold">
+                ...
+              </span>
+            ) : stats.lastReport !== "Belum Dimulai" ? (
+              <StatusPelaporanBadge status={stats.lastReport} size="sm" />
+            ) : (
+              <span className="text-sm text-neutral-400 font-semibold">-</span>
+            )}
           </div>
         </div>
 
@@ -106,24 +174,33 @@ export default function DashboardPage() {
 
           {/* List Card */}
           <div className="flex flex-col gap-4">
-            <TransactionCard
-              productName="Kambing Premium"
-              invoice="INV-2026-001"
-              date="15 Maret 2026"
-              status="BERHASIL"
-            />
-            <TransactionCard
-              productName="Kambing Premium"
-              invoice="INV-2026-002"
-              date="15 Maret 2026"
-              status="KADALUARSA"
-            />
-            <TransactionCard
-              productName="Sapi Brahmana"
-              invoice="INV-2026-003"
-              date="16 Maret 2026"
-              status="BERHASIL"
-            />
+            {isLoading ? (
+              <div className="py-8 text-center text-neutral-500 italic">
+                Memuat riwayat transaksi...
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="py-8 text-center text-neutral-500 italic">
+                Belum ada transaksi terbaru.
+              </div>
+            ) : (
+              transactions.map((trx) => (
+                <TransactionCard
+                  key={trx.id}
+                  productName={trx.produk}
+                  invoice={trx.invoice}
+                  date={trx.tanggal}
+                  status={
+                    trx.pembayaran === "TERTUNDA"
+                      ? "MENUNGGU PEMBAYARAN"
+                      : (trx.pembayaran as
+                          | "BERHASIL"
+                          | "GAGAL"
+                          | "KADALUARSA"
+                          | "BELUM DIMULAI")
+                  }
+                />
+              ))
+            )}
           </div>
         </div>
       </div>

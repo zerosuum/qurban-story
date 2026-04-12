@@ -2,32 +2,86 @@
 
 import Link from "next/link";
 import Image from "next/image";
-// import { useParams } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
-type ProductDetail = {
+type ProductDetailResponse = {
+  id: string;
   name: string;
-  originalPrice?: string;
-  currentPrice: string;
-  weight: string;
+  description: string | null;
+  weight: string | null;
+  price: string;
+  promoPrice: string | null;
   stock: number;
-  images: string[];
-  description: string;
-  quota?: { current: number; max: number };
+  images: { imageUrl: string; isPrimary: boolean }[];
 };
 
-export default function ProductDetailPage() {
-  // const params = useParams();
+function formatRupiah(value: string | number) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(Number(value));
+}
 
-  const product: ProductDetail = {
-    name: "Sapi Limosin (Patungan)",
-    originalPrice: "Rp. 4.200.000",
-    currentPrice: "Rp. 4.000.000",
-    weight: "350-400 kg",
-    stock: 5,
-    images: ["/hewan/sapi.png", "/hewan/sapi.png", "/hewan/sapi.png"],
-    description: `Tentang kami\nQurban Story bergerak di bidang peternakan dan pengelolaan qurban. Dengan pengalaman lebih dari satu dekade, kami telah melayani ribuan pelanggan di berbagai daerah. Kami berfokus pada kemudahan transaksi dan pelaporan yang jelas, sehingga setiap pequrban dapat memantau proses pelaksanaan qurban dengan tenang dan percaya.\n\nKeunggulan Qurban Story\n1. Pengalaman lebih dari 10 tahun\n2. Proses pembelian mudah\n3. Laporan pelaksanaan jelas\n4. Tim yang responsif\n\nAlur pembelian qurban\n1. Pilih produk qurban\n2. Lakukan pembayaran\n3. Terima laporan pelaksanaan`,
-    quota: { current: 2, max: 7 },
-  };
+export default function ProductDetailPage() {
+  const params = useParams();
+  const id = params?.id as string;
+
+  const [product, setProduct] = useState<ProductDetailResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchDetail = async () => {
+      try {
+        const res = await fetch(`/api/products/${id}`);
+        if (!res.ok) throw new Error("Gagal fetch detail produk");
+        const json = await res.json();
+        setProduct(json.data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void fetchDetail();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[calc(100vh-80px)] w-full flex justify-center items-center">
+        <span className="text-neutral-500 font-medium">
+          Memuat detail produk...
+        </span>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-[calc(100vh-80px)] w-full flex justify-center items-center flex-col gap-4">
+        <span className="text-neutral-500 font-medium">
+          Produk tidak ditemukan.
+        </span>
+        <Link href="/produk" className="text-primary-600 underline">
+          Kembali ke Katalog
+        </Link>
+      </div>
+    );
+  }
+
+  const isPatungan = product.name.toLowerCase().includes("patungan");
+  const mainImage =
+    product.images.find((img) => img.isPrimary)?.imageUrl ||
+    product.images[0]?.imageUrl ||
+    "/hewan/sapi.png";
+  const allImages =
+    product.images.length > 0
+      ? product.images.map((img) => img.imageUrl)
+      : ["/hewan/sapi.png"];
 
   return (
     <div className="min-h-[calc(100vh-80px)] w-full bg-white flex flex-col items-center py-12 px-6">
@@ -35,7 +89,7 @@ export default function ProductDetailPage() {
         {/* Navigasi Kembali */}
         <Link
           href="/produk"
-          className="flex items-center gap-2 w-full px-0 pt-6 pb-2 text-primary-600 font-bold text-[16px] leading-6"
+          className="flex items-center gap-2 w-full px-0 pt-6 pb-2 text-primary-600 font-bold text-[16px] leading-6 hover:opacity-80"
         >
           {/* ICON */}
           <svg
@@ -69,17 +123,17 @@ export default function ProductDetailPage() {
         {/* Hero Section Produk */}
         <div className="flex flex-col md:flex-row items-start gap-8 w-full">
           {/* Kiri: Gallery Foto */}
-          <div className="flex flex-col gap-4 shrink-0">
+          <div className="flex flex-col gap-4 shrink-0 w-full md:w-auto">
             <div className="relative w-full md:w-[384px] h-[384px] rounded-xl bg-[#F3F3F3] overflow-hidden">
               <Image
-                src={product.images[0]}
+                src={mainImage}
                 alt={product.name}
                 fill
                 className="object-cover"
               />
             </div>
             <div className="flex gap-4 overflow-x-auto pb-2">
-              {product.images.map((img, idx) => (
+              {allImages.map((img, idx) => (
                 <div
                   key={idx}
                   className="relative w-[90px] h-[96px] shrink-0 rounded-xl bg-[#F3F3F3] overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
@@ -92,20 +146,6 @@ export default function ProductDetailPage() {
                   />
                 </div>
               ))}
-              <div className="flex justify-center items-center w-[90px] h-[96px] shrink-0 rounded-xl bg-[#F3F3F3] opacity-50 cursor-not-allowed">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-              </div>
             </div>
           </div>
 
@@ -116,19 +156,19 @@ export default function ProductDetailPage() {
             </h1>
 
             <div className="flex items-end gap-3">
-              {product.originalPrice && (
+              {product.promoPrice && (
                 <span className="font-sans text-[28px] italic font-normal leading-[38px] text-[#8A6729] line-through">
-                  {product.originalPrice}
+                  {formatRupiah(product.price)}
                 </span>
               )}
               <span className="font-sans text-[28px] font-bold leading-[38px] text-[#044B57]">
-                {product.currentPrice}
+                {formatRupiah(product.promoPrice || product.price)}
               </span>
             </div>
 
             <div className="flex flex-col gap-2 mt-2">
               <p className="font-sans text-[18px] font-normal leading-[27px] text-[#022D34]">
-                Berat: {product.weight}
+                Berat: {product.weight || "Tidak spesifik"}
               </p>
               <p className="font-sans text-[18px] font-normal leading-[27px] text-[#022D34]">
                 Stok: {product.stock}
@@ -136,21 +176,21 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Box Kuota Terisi */}
-            {product.quota && (
+            {isPatungan && (
               <div className="flex flex-col items-start w-full p-6 gap-1 rounded-xl border border-[#F3F3F3] bg-[#FDFDF8] mt-2 mb-2">
                 <div className="flex justify-between w-full">
                   <span className="font-sans text-[12px] font-semibold leading-[18px] text-neutral-900">
                     kuota terisi
                   </span>
                   <span className="font-sans text-[12px] font-semibold leading-[18px] text-neutral-900">
-                    {product.quota.current}/{product.quota.max}
+                    0/7
                   </span>
                 </div>
                 <div className="w-full h-2.5 bg-[#F3F3F3] rounded-full overflow-hidden flex mt-1">
                   <div
                     className="h-full bg-[#033C46] transition-all duration-500 rounded-r-none"
                     style={{
-                      width: `${(product.quota.current / product.quota.max) * 100}%`,
+                      width: `0%`,
                     }}
                   />
                 </div>
@@ -159,7 +199,7 @@ export default function ProductDetailPage() {
 
             {/* Tombol Beli */}
             <Link
-              href={`/checkout/inv-dummy`}
+              href={`/checkout/${product.id}`}
               className="flex justify-center items-center h-10 px-6 py-2 mt-4 gap-2.5 rounded-xl bg-[#044B57] text-white font-sans font-bold text-[16px] leading-[24px] hover:bg-[#033C46] active:scale-95 transition-all w-max"
             >
               <svg
@@ -197,7 +237,7 @@ export default function ProductDetailPage() {
           <p className="font-sans text-[16px] font-medium leading-[24px] text-[#022D34] whitespace-pre-wrap">
             <span className="font-bold">Deskripsi:</span>
             {"\n"}
-            {product.description}
+            {product.description || "Tidak ada deskripsi."}
           </p>
         </div>
       </div>

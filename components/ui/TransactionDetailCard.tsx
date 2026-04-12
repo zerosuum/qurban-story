@@ -1,6 +1,5 @@
 import React from "react";
 
-// Bikin sub-komponen kecil biar kodenya rapi dan nggak diulang-ulang
 const DetailItem = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col items-start gap-2 flex-1 min-w-[200px]">
     <span className="font-sans text-[16px] font-normal leading-[24px] text-neutral-900">

@@ -1,77 +1,48 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import ProductCard from "@/components/ui/ProductCard";
 
+type ProductApiResponse = {
+  id: string;
+  name: string;
+  weight: string | null;
+  price: string;
+  promoPrice: string | null;
+  images: { imageUrl: string; isPrimary: boolean }[];
+};
+
+function formatRupiah(value: string | number) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(Number(value));
+}
+
 export default function ProdukPage() {
-  const products = [
-    {
-      id: "kambing-premium",
-      image: "/hewan/kambing.png",
-      name: "Kambing Premium",
-      originalPrice: "Rp. 3.600.000",
-      currentPrice: "Rp. 3.200.000",
-      weight: "25-35 kg",
-    },
-    {
-      id: "sapi-limosin-patungan",
-      image: "/hewan/sapi.png",
-      name: "Sapi Limosin (Patungan)",
-      originalPrice: "Rp. 4.200.000",
-      currentPrice: "Rp. 4.000.000",
-      weight: "350-400 kg",
-      quota: { current: 2, max: 7 },
-    },
-    {
-      id: "domba-pilihan",
-      image: "/hewan/domba.png",
-      name: "Domba Pilihan",
-      originalPrice: "Rp. 3.200.000",
-      currentPrice: "Rp. 2.800.000",
-      weight: "30-35 kg",
-    },
-    {
-      id: "sapi-brahmana",
-      image: "/hewan/sapi.png",
-      name: "Sapi Brahmana",
-      originalPrice: "Rp. 27.000.000",
-      currentPrice: "Rp. 25.000.000",
-      weight: "300-350 kg",
-    },
-    {
-      id: "sapi-limosin",
-      image: "/hewan/sapi.png",
-      name: "Sapi Limosin",
-      currentPrice: "Rp. 28.000.000",
-      weight: "350-400 kg",
-    },
-    {
-      id: "sapi-brahmana-patungan",
-      image: "/hewan/sapi.png",
-      name: "Sapi Brahmana (Patungan)",
-      originalPrice: "Rp. 3.800.000",
-      currentPrice: "Rp. 3.600.000",
-      weight: "300-350 kg",
-      quota: { current: 0, max: 7 },
-    },
-    {
-      id: "kambing-super",
-      image: "/hewan/kambing.png",
-      name: "Kambing Super",
-      currentPrice: "Rp. 4.200.000",
-      weight: "30-35 kg",
-    },
-    {
-      id: "domba-super",
-      image: "/hewan/domba.png",
-      name: "Domba Super",
-      currentPrice: "Rp. 4.500.000",
-      weight: "35-40 kg",
-    },
-  ];
+  const [products, setProducts] = useState<ProductApiResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch("/api/products?pageSize=20");
+        if (!res.ok) throw new Error("Gagal fetch produk");
+        const json = await res.json();
+        setProducts(json.data || []);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void fetchProducts();
+  }, []);
 
   return (
-    <div className="w-full bg-white flex flex-col items-center pb-24">
+    <div className="w-full bg-white flex flex-col items-center pb-24 min-h-[calc(100vh-80px)]">
       {/* Header Section */}
       <div className="flex flex-col items-center gap-6 py-[60px] px-6 w-full text-center">
         <h1 className="font-sans text-[36px] font-semibold leading-[46px] text-[#022D34]">
@@ -84,20 +55,53 @@ export default function ProdukPage() {
 
       {/* Grid Produk */}
       <div className="w-full max-w-[1200px] px-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
-          {products.map((product) => (
-            <ProductCard
-              key={product.id}
-              id={product.id}
-              image={product.image}
-              name={product.name}
-              originalPrice={product.originalPrice}
-              currentPrice={product.currentPrice}
-              weight={product.weight}
-              quota={product.quota}
-            />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="w-full flex justify-center py-12">
+            <span className="text-neutral-500 font-medium">
+              Memuat katalog produk...
+            </span>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="w-full flex justify-center py-12">
+            <span className="text-neutral-500 font-medium">
+              Belum ada produk yang tersedia.
+            </span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
+            {products.map((product) => {
+              const primaryImage =
+                product.images.find((img) => img.isPrimary)?.imageUrl ||
+                product.images[0]?.imageUrl ||
+                "/hewan/sapi.png"; // Fallback image
+
+              const isPatungan = product.name
+                .toLowerCase()
+                .includes("patungan");
+
+              return (
+                <ProductCard
+                  key={product.id}
+                  id={product.id}
+                  image={primaryImage}
+                  name={product.name}
+                  originalPrice={
+                    product.promoPrice ? formatRupiah(product.price) : undefined
+                  }
+                  currentPrice={formatRupiah(
+                    product.promoPrice || product.price,
+                  )}
+                  weight={
+                    product.weight
+                      ? `${product.weight}`
+                      : "Berat tidak spesifik"
+                  }
+                  quota={isPatungan ? { current: 0, max: 7 } : undefined} // Mock quota sementara krn Zayyan blm pass AnimalGroup di API product
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
