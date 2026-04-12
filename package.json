@@ -12,6 +12,7 @@
     "@auth/prisma-adapter": "^2.11.1",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
+    "midtrans-client": "^1.4.3",
     "next": "16.1.6",
     "next-auth": "^4.24.13",
     "pg": "^8.20.0",

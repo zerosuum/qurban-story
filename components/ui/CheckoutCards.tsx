@@ -2,8 +2,10 @@
 import React, { useState } from "react";
 
 // --- CARD: CATATAN NIAT ---
-export function CheckoutNiat() {
+export function CheckoutNiat({ nama = "" }: { nama?: string }) {
   const [selectedNiat, setSelectedNiat] = useState<"sendiri" | "orang-lain">("sendiri");
+  
+  const displayName = nama.trim() !== "" ? nama : "[nama]";
 
   return (
     <div className="flex flex-col items-start w-full max-w-[792px] p-6 gap-6 rounded-xl border border-neutral-200 bg-white shadow-[0_2px_4px_-2px_rgba(24,39,75,0.12),0_4px_4px_-2px_rgba(24,39,75,0.08)]">
@@ -51,12 +53,11 @@ export function CheckoutNiat() {
               : "bg-[#FEF1DA]/40 border border-transparent group-hover:bg-[#FEF1DA]/70"
           }`}>
             <p className="font-sans text-[16px] font-normal italic leading-[24px] text-neutral-900">
-              “Saya niat berkurban sunnah untuk [nama] karena Allah.”
+              “Saya niat berkurban sunnah untuk {displayName} karena Allah.”
             </p>
           </div>
         </div>
       </div>
-
     </div>
   );
 }

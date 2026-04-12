@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import StatusPembayaranBadge, {
   PembayaranStatus,
@@ -9,7 +9,16 @@ import StatusPelaporanBadge, {
   PelaporanStatus,
 } from "@/components/ui/StatusPelaporanBadge";
 
-// --- 1. KOMPONEN CUSTOM FILTER---
+function formatRupiah(value: string | number) {
+  const number = Number(value);
+  if (Number.isNaN(number)) return String(value);
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(number);
+}
+
 function CustomFilter({
   value,
   options,
@@ -23,7 +32,6 @@ function CustomFilter({
 
   return (
     <div className="relative w-full md:w-[220px]">
-      {/* Tombol Toggle */}
       <div
         onClick={() => setIsOpen(!isOpen)}
         className={`flex justify-between items-center w-full h-10 px-4 py-2 cursor-pointer transition-all border bg-white ${
@@ -41,7 +49,9 @@ function CustomFilter({
           height="24"
           viewBox="0 0 24 24"
           fill="none"
-          className={`shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          className={`shrink-0 transition-transform duration-200 ${
+            isOpen ? "rotate-180" : ""
+          }`}
         >
           <path
             d="M12 15.4L6 9.4L7.4 8L12 12.6L16.6 8L18 9.4L12 15.4Z"
@@ -49,8 +59,6 @@ function CustomFilter({
           />
         </svg>
       </div>
-
-      {/* Menu Options */}
       {isOpen && (
         <div className="absolute top-[39px] left-0 w-full flex flex-col items-start bg-white border border-[#DCDCDC] border-t-[#DCDCDC] rounded-b-xl z-50 overflow-hidden shadow-lg">
           {options.map((opt, idx) => (
@@ -73,93 +81,74 @@ function CustomFilter({
   );
 }
 
-// --- 2. DATA MOCKUP ---
-const mockData = [
-  {
-    invoice: "INV-2026-001",
-    produk: "Kambing\nPremium",
-    tanggal: "15-03-2026",
-    nominal: "3.200.000",
-    pembayaran: "BERHASIL",
-    pelaporan: "Tahap 1/3",
-  },
-  {
-    invoice: "INV-2026-002",
-    produk: "Kambing\nPremium",
-    tanggal: "15-03-2026",
-    nominal: "3.200.000",
-    pembayaran: "KADALUARSA",
-    pelaporan: "Belum Dimulai",
-  },
-  {
-    invoice: "INV-2026-003",
-    produk: "Sapi\nBrahmana",
-    tanggal: "16-03-2026",
-    nominal: "25.000.000",
-    pembayaran: "BERHASIL",
-    pelaporan: "Tahap 1/3",
-  },
-  {
-    invoice: "INV-2026-004",
-    produk: "Domba\nPilihan",
-    tanggal: "16-03-2026",
-    nominal: "2.800.000",
-    pembayaran: "GAGAL",
-    pelaporan: "Belum Dimulai",
-  },
-  {
-    invoice: "INV-2026-009",
-    produk: "Sapi Limosin\n(Patungan)",
-    tanggal: "19-03-2026",
-    nominal: "4.000.000",
-    pembayaran: "TERTUNDA",
-    pelaporan: "Belum Dimulai",
-  },
-];
+const PAGE_SIZE = 5;
 
-const PAGE_SIZE = 5; // Batas item per halaman
+type TransactionRow = {
+  id: string;
+  invoice: string;
+  customer: string;
+  produk: string;
+  tanggal: string;
+  nominal: string;
+  pembayaran: PembayaranStatus;
+  pelaporan: PelaporanStatus;
+};
 
-// --- 3. KOMPONEN UTAMA ---
 export default function RiwayatTransaksiPage() {
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("Semua Pembayaran");
   const [reportFilter, setReportFilter] = useState("Semua Pelaporan");
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // --- LOGIKA FILTERING & SEARCH ---
-  const filteredData = useMemo(() => {
-    return mockData.filter((item) => {
-      const matchSearch =
-        item.invoice.toLowerCase().includes(search.toLowerCase()) ||
-        item.produk
-          .replace(/\n/g, " ")
-          .toLowerCase()
-          .includes(search.toLowerCase());
-      const matchPayment =
-        paymentFilter === "Semua Pembayaran" ||
-        item.pembayaran === paymentFilter;
-      const matchReport =
-        reportFilter === "Semua Pelaporan" || item.pelaporan === reportFilter;
-      return matchSearch && matchPayment && matchReport;
-    });
-  }, [search, paymentFilter, reportFilter]);
+  const [transactions, setTransactions] = useState<TransactionRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // --- LOGIKA PAGINATION ---
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / PAGE_SIZE));
-  const paginatedData = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filteredData.slice(start, start + PAGE_SIZE);
-  }, [filteredData, page]);
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      setIsLoading(true);
+      try {
+        const query = new URLSearchParams({
+          page: page.toString(),
+          pageSize: PAGE_SIZE.toString(),
+        });
 
-  // Reset halaman ke 1 kalau user ganti filter/search
-  const handleFilterChange = (setter: (value: string) => void, value: string) => {
+        if (search) query.append("search", search);
+        if (paymentFilter !== "Semua Pembayaran")
+          query.append("payment", paymentFilter);
+        if (reportFilter !== "Semua Pelaporan")
+          query.append("report", reportFilter);
+
+        const res = await fetch(`/api/transactions?${query.toString()}`);
+        if (!res.ok) throw new Error("Gagal mengambil data transaksi.");
+
+        const json = await res.json();
+        setTransactions(json.data || []);
+        setTotalPages(json.pagination?.totalPages || 1);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const timerId = setTimeout(() => {
+      fetchTransactions();
+    }, 300);
+
+    return () => clearTimeout(timerId);
+  }, [page, search, paymentFilter, reportFilter]);
+
+  const handleFilterChange = (
+    setter: (value: string) => void,
+    value: string,
+  ) => {
     setter(value);
     setPage(1);
   };
 
   return (
     <div className="min-h-[calc(100vh-80px)] w-full bg-white flex flex-col items-center pb-24">
-      {/* HEADER SECTION */}
       <div className="flex flex-col items-center w-full px-6 py-[60px] gap-2 text-center">
         <h1 className="font-sans text-[36px] font-semibold leading-[46px] text-[#022D34]">
           Riwayat Transaksi
@@ -169,11 +158,8 @@ export default function RiwayatTransaksiPage() {
         </p>
       </div>
 
-      {/* CONTAINER */}
       <div className="w-full max-w-[1140px] flex flex-col px-6 gap-6">
-        {/* CONTROLS (Search & Filters) */}
         <div className="flex flex-col lg:flex-row justify-between items-center w-full gap-4">
-          {/* Search Bar */}
           <div className="flex items-center w-full lg:max-w-[588px] h-10 px-6 gap-2 rounded-xl border border-[#DCDCDC] bg-white focus-within:border-[#044B57] transition-colors">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -197,7 +183,6 @@ export default function RiwayatTransaksiPage() {
             />
           </div>
 
-          {/* CUSTOM FILTER CONTAINER */}
           <div className="flex flex-col sm:flex-row w-full lg:w-auto gap-4">
             <CustomFilter
               value={paymentFilter}
@@ -225,7 +210,6 @@ export default function RiwayatTransaksiPage() {
           </div>
         </div>
 
-        {/* TABLE SECTION */}
         <div className="w-full overflow-x-auto rounded-xl border border-[#DCDCDC] shadow-[0_2px_4px_-2px_rgba(24,39,75,0.12),0_4px_4px_-2px_rgba(24,39,75,0.08)] bg-white">
           <table className="w-full min-w-[950px] border-collapse text-left">
             <thead>
@@ -248,70 +232,22 @@ export default function RiwayatTransaksiPage() {
                 <th className="px-6 py-4 font-sans text-[16px] font-bold leading-[24px] text-white whitespace-nowrap">
                   Pelaporan
                 </th>
-                {/* AKSI TEXT CENTER */}
                 <th className="px-6 py-4 font-sans text-[16px] font-bold leading-[24px] text-white text-center whitespace-nowrap">
                   Aksi
                 </th>
               </tr>
             </thead>
             <tbody>
-              {paginatedData.map((item, index) => (
-                <tr
-                  key={index}
-                  className="border-b border-[#F3F3F3] hover:bg-neutral-50 transition-colors"
-                >
-                  <td className="px-6 py-4 font-sans text-[16px] text-neutral-900 whitespace-nowrap">
-                    {item.invoice}
-                  </td>
-                  <td className="px-6 py-4 font-sans text-[16px] text-neutral-900 whitespace-pre-wrap leading-[24px] min-w-[150px]">
-                    {item.produk}
-                  </td>
-                  <td className="px-6 py-4 font-sans text-[16px] text-neutral-900 whitespace-nowrap">
-                    {item.tanggal}
-                  </td>
-                  <td className="px-6 py-4 font-sans text-[16px] text-neutral-900 whitespace-nowrap">
-                    {item.nominal}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <StatusPembayaranBadge
-                      status={item.pembayaran as PembayaranStatus}
-                      size="sm"
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <StatusPelaporanBadge
-                      status={item.pelaporan as PelaporanStatus}
-                      size="sm"
-                    />
-                  </td>
-                  {/* ICON AKSI CENTERED */}
-                  <td className="px-6 py-4">
-                    <div className="flex justify-center items-center h-full w-full">
-                      <Link
-                        href={`/riwayat-trx/${item.invoice}`}
-                        className="hover:opacity-70 transition-opacity"
-                        title="Lihat Detail"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="22"
-                          height="15"
-                          viewBox="0 0 22 15"
-                          fill="none"
-                        >
-                          <path
-                            d="M14.1875 10.6875C15.0625 9.8125 15.5 8.75 15.5 7.5C15.5 6.25 15.0625 5.1875 14.1875 4.3125C13.3125 3.4375 12.25 3 11 3C9.75 3 8.6875 3.4375 7.8125 4.3125C6.9375 5.1875 6.5 6.25 6.5 7.5C6.5 8.75 6.9375 9.8125 7.8125 10.6875C8.6875 11.5625 9.75 12 11 12C12.25 12 13.3125 11.5625 14.1875 10.6875ZM9.0875 9.4125C8.5625 8.8875 8.3 8.25 8.3 7.5C8.3 6.75 8.5625 6.1125 9.0875 5.5875C9.6125 5.0625 10.25 4.8 11 4.8C11.75 4.8 12.3875 5.0625 12.9125 5.5875C13.4375 6.1125 13.7 6.75 13.7 7.5C13.7 8.25 13.4375 8.8875 12.9125 9.4125C12.3875 9.9375 11.75 10.2 11 10.2C10.25 10.2 9.6125 9.9375 9.0875 9.4125ZM4.35 12.9625C2.35 11.6042 0.9 9.78333 0 7.5C0.9 5.21667 2.35 3.39583 4.35 2.0375C6.35 0.679167 8.56667 0 11 0C13.4333 0 15.65 0.679167 17.65 2.0375C19.65 3.39583 21.1 5.21667 22 7.5C21.1 9.78333 19.65 11.6042 17.65 12.9625C15.65 14.3208 13.4333 15 11 15C8.56667 15 6.35 14.3208 4.35 12.9625ZM16.1875 11.5125C17.7625 10.5208 18.9667 9.18333 19.8 7.5C18.9667 5.81667 17.7625 4.47917 16.1875 3.4875C14.6125 2.49583 12.8833 2 11 2C9.11667 2 7.3875 2.49583 5.8125 3.4875C4.2375 4.47917 3.03333 5.81667 2.2 7.5C3.03333 9.18333 4.2375 10.5208 5.8125 11.5125C7.3875 12.5042 9.11667 13 11 13C12.8833 13 14.6125 12.5042 16.1875 11.5125Z"
-                            fill="#2D6A4F"
-                          />
-                        </svg>
-                      </Link>
-                    </div>
+              {isLoading ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-6 py-12 text-center font-sans text-neutral-500 italic"
+                  >
+                    Memuat data transaksi...
                   </td>
                 </tr>
-              ))}
-
-              {/* EMPTY STATE */}
-              {paginatedData.length === 0 && (
+              ) : transactions.length === 0 ? (
                 <tr>
                   <td
                     colSpan={7}
@@ -320,12 +256,63 @@ export default function RiwayatTransaksiPage() {
                     Transaksi tidak ditemukan.
                   </td>
                 </tr>
+              ) : (
+                transactions.map((item, index) => (
+                  <tr
+                    key={index}
+                    className="border-b border-[#F3F3F3] hover:bg-neutral-50 transition-colors"
+                  >
+                    <td className="px-6 py-4 font-sans text-[16px] text-neutral-900 whitespace-nowrap">
+                      {item.invoice}
+                    </td>
+                    <td className="px-6 py-4 font-sans text-[16px] text-neutral-900 whitespace-pre-wrap leading-[24px] min-w-[150px]">
+                      {item.produk}
+                    </td>
+                    <td className="px-6 py-4 font-sans text-[16px] text-neutral-900 whitespace-nowrap">
+                      {item.tanggal}
+                    </td>
+                    <td className="px-6 py-4 font-sans text-[16px] text-neutral-900 whitespace-nowrap">
+                      {formatRupiah(item.nominal)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <StatusPembayaranBadge
+                        status={item.pembayaran}
+                        size="sm"
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <StatusPelaporanBadge status={item.pelaporan} size="sm" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex justify-center items-center h-full w-full">
+                        {/* FIX: Link pakai item.id */}
+                        <Link
+                          href={`/riwayat-trx/${item.id}`}
+                          className="hover:opacity-70 transition-opacity"
+                          title="Lihat Detail"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="22"
+                            height="15"
+                            viewBox="0 0 22 15"
+                            fill="none"
+                          >
+                            <path
+                              d="M14.1875 10.6875C15.0625 9.8125 15.5 8.75 15.5 7.5C15.5 6.25 15.0625 5.1875 14.1875 4.3125C13.3125 3.4375 12.25 3 11 3C9.75 3 8.6875 3.4375 7.8125 4.3125C6.9375 5.1875 6.5 6.25 6.5 7.5C6.5 8.75 6.9375 9.8125 7.8125 10.6875C8.6875 11.5625 9.75 12 11 12C12.25 12 13.3125 11.5625 14.1875 10.6875ZM9.0875 9.4125C8.5625 8.8875 8.3 8.25 8.3 7.5C8.3 6.75 8.5625 6.1125 9.0875 5.5875C9.6125 5.0625 10.25 4.8 11 4.8C11.75 4.8 12.3875 5.0625 12.9125 5.5875C13.4375 6.1125 13.7 6.75 13.7 7.5C13.7 8.25 13.4375 8.8875 12.9125 9.4125C12.3875 9.9375 11.75 10.2 11 10.2C10.25 10.2 9.6125 9.9375 9.0875 9.4125ZM4.35 12.9625C2.35 11.6042 0.9 9.78333 0 7.5C0.9 5.21667 2.35 3.39583 4.35 2.0375C6.35 0.679167 8.56667 0 11 0C13.4333 0 15.65 0.679167 17.65 2.0375C19.65 3.39583 21.1 5.21667 22 7.5C21.1 9.78333 19.65 11.6042 17.65 12.9625C15.65 14.3208 13.4333 15 11 15C8.56667 15 6.35 14.3208 4.35 12.9625ZM16.1875 11.5125C17.7625 10.5208 18.9667 9.18333 19.8 7.5C18.9667 5.81667 17.7625 4.47917 16.1875 3.4875C14.6125 2.49583 12.8833 2 11 2C9.11667 2 7.3875 2.49583 5.8125 3.4875C4.2375 4.47917 3.03333 5.81667 2.2 7.5C3.03333 9.18333 4.2375 10.5208 5.8125 11.5125C7.3875 12.5042 9.11667 13 11 13C12.8833 13 14.6125 12.5042 16.1875 11.5125Z"
+                              fill="#2D6A4F"
+                            />
+                          </svg>
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
 
-        {/* PAGINATION */}
         <div className="flex justify-between items-center w-full max-w-[264px] mx-auto mt-4">
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -345,11 +332,9 @@ export default function RiwayatTransaksiPage() {
               />
             </svg>
           </button>
-
           <span className="font-sans text-[16px] font-normal leading-[20px] text-[#000]">
             Halaman {page} dari {totalPages}
           </span>
-
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages || totalPages === 0}
