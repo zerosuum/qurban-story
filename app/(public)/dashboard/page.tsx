@@ -16,16 +16,16 @@ type TransactionRow = {
   invoice: string;
   produk: string;
   tanggal: string;
-  pembayaran: PembayaranStatus;
-  pelaporan: PelaporanStatus;
+  pembayaran: string;
+  pelaporan: string;
 };
 
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [stats, setStats] = useState({
     total: 0,
-    lastPayment: "Belum Dimulai" as PembayaranStatus | "Belum Dimulai",
-    lastReport: "Belum Dimulai" as PelaporanStatus,
+    lastPayment: "Belum Dimulai" as PembayaranStatus | string,
+    lastReport: "Belum Dimulai" as PelaporanStatus | string,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -91,10 +91,7 @@ export default function DashboardPage() {
                 ...
               </span>
             ) : stats.lastPayment !== "Belum Dimulai" ? (
-              <StatusPembayaranBadge
-                status={stats.lastPayment as PembayaranStatus}
-                size="sm"
-              />
+              <StatusPembayaranBadge status={stats.lastPayment} size="sm" />
             ) : (
               <span className="text-sm text-neutral-400 font-semibold">-</span>
             )}
@@ -110,7 +107,10 @@ export default function DashboardPage() {
                 ...
               </span>
             ) : stats.lastReport !== "Belum Dimulai" ? (
-              <StatusPelaporanBadge status={stats.lastReport} size="sm" />
+              <StatusPelaporanBadge
+                status={stats.lastReport as PelaporanStatus}
+                size="sm"
+              />
             ) : (
               <span className="text-sm text-neutral-400 font-semibold">-</span>
             )}
@@ -130,7 +130,7 @@ export default function DashboardPage() {
 
             <Link
               href="/riwayat-trx"
-              className="group flex justify-center items-center h-10 px-4 py-2 gap-2.5 rounded-xl border border-primary-500 text-primary-600 hover:bg-primary-50 hover:border-primary-600 hover:shadow-sm active:scale-95 transition-all duration-200"
+              className="group flex justify-center items-center h-10 px-4 py-2 gap-2.5 rounded-xl border border-primary-500 text-primary-600 hover:bg-neutral-50 hover:text-primary-600 hover:border-primary-600 active:scale-95 transition-all duration-200"
             >
               <span className="font-sans font-bold text-[16px]">
                 Selengkapnya
@@ -186,17 +186,15 @@ export default function DashboardPage() {
               transactions.map((trx) => (
                 <TransactionCard
                   key={trx.id}
+                  id={trx.id}
                   productName={trx.produk}
                   invoice={trx.invoice}
                   date={trx.tanggal}
                   status={
-                    trx.pembayaran === "TERTUNDA"
+                    trx.pembayaran === "TERTUNDA" ||
+                    trx.pembayaran === "PAYMENT_PENDING"
                       ? "MENUNGGU PEMBAYARAN"
-                      : (trx.pembayaran as
-                          | "BERHASIL"
-                          | "GAGAL"
-                          | "KADALUARSA"
-                          | "BELUM DIMULAI")
+                      : trx.pembayaran
                   }
                 />
               ))
