@@ -91,7 +91,15 @@ export default function DashboardPage() {
                 ...
               </span>
             ) : stats.lastPayment !== "Belum Dimulai" ? (
-              <StatusPembayaranBadge status={stats.lastPayment} size="sm" />
+              <StatusPembayaranBadge
+                status={
+                  stats.lastPayment === "TERTUNDA" ||
+                  stats.lastPayment === "PAYMENT_PENDING"
+                    ? "MENUNGGU PEMBAYARAN"
+                    : stats.lastPayment
+                }
+                size="sm"
+              />
             ) : (
               <span className="text-sm text-neutral-400 font-semibold">-</span>
             )}

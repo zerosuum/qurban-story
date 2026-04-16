@@ -144,6 +144,7 @@ model Order {
   donorPhone    String      @map("donor_phone")
   totalPrice    Decimal     @map("total_price")
   status        OrderStatus @default(PAYMENT_PENDING)
+  snapToken     String?     @map("snap_token")
   createdAt     DateTime    @default(now()) @map("created_at")
   paidAt        DateTime?   @map("paid_at")
 

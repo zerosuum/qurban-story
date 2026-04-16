@@ -20,6 +20,7 @@ type DetailResponse = {
     produk: string;
     tanggal: string;
     nominal: string;
+    paymentMethod: string | null;
     pembayaran: string;
     pelaporan: string;
     documentation: TransactionDocumentation;
@@ -34,6 +35,20 @@ function formatRupiah(value: string | number) {
     currency: "IDR",
     minimumFractionDigits: 0,
   }).format(number);
+}
+
+function formatPaymentMethod(type: string | null) {
+  if (!type) return "-";
+  const methods: Record<string, string> = {
+    gopay: "GoPay",
+    qris: "QRIS",
+    shopeepay: "ShopeePay",
+    bank_transfer: "Virtual Account",
+    echannel: "Mandiri Bill",
+    cstore: "Minimarket",
+    credit_card: "Kartu Kredit",
+  };
+  return methods[type] || type.replace(/_/g, " ").toUpperCase();
 }
 
 export default function DetailTransaksiPage() {
@@ -135,20 +150,69 @@ export default function DetailTransaksiPage() {
           tanggal={`${detail.tanggal}`}
           pequrban={detail.customer}
           kodeHewan={kodeHewan}
-          metodePembayaran="Midtrans"
+          metodePembayaran={formatPaymentMethod(detail.paymentMethod)}
           namaBerqurban={detail.customer}
           produk={detail.produk}
-          harga={`Rp. ${formatRupiah(detail.nominal)}`}
+          harga={`${formatRupiah(detail.nominal)}`}
         />
 
-        <ProgressPelaporan />
+        {detail.pembayaran === "BERHASIL" ? (
+          <>
+            <ProgressPelaporan />
+            <DocumentationCard
+              photoUrls={detail.documentation.photoUrls || []}
+              videoUrl={detail.documentation.videoUrl || null}
+            />
+            <DistributionReportCard />
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col gap-3 w-full p-6 rounded-xl border border-neutral-200 bg-white shadow-sm">
+              <h2 className="text-[20px] font-bold text-neutral-900">
+                Progress Pelaporan
+              </h2>
+              <div className="flex w-full px-4 py-3 rounded-lg bg-[#FEF1DA] border border-[#FEF1DA]">
+                <p className="text-[16px] italic leading-[24px] text-neutral-900">
+                  {detail.pembayaran === "KADALUARSA"
+                    ? "Fitur ini tidak tersedia karena transaksi kadaluarsa. Silakan buat transaksi baru."
+                    : detail.pembayaran === "GAGAL"
+                      ? "Fitur ini tidak tersedia karena pembayaran gagal. Silakan coba bayar kembali untuk melanjutkan transaksi."
+                      : "Fitur ini tidak tersedia karena pembayaran tertunda. Silakan bayar untuk melanjutkan transaksi."}
+                </p>
+              </div>
+            </div>
 
-        <DocumentationCard
-          photoUrls={detail.documentation.photoUrls || []}
-          videoUrl={detail.documentation.videoUrl || null}
-        />
+            <div className="flex flex-col gap-3 w-full p-6 rounded-xl border border-neutral-200 bg-white shadow-sm">
+              <h2 className="text-[20px] font-bold text-neutral-900">
+                Dokumentasi
+              </h2>
+              <div className="flex w-full px-4 py-3 rounded-lg bg-[#FEF1DA] border border-[#FEF1DA]">
+                <p className="text-[16px] italic leading-[24px] text-neutral-900">
+                  {detail.pembayaran === "KADALUARSA"
+                    ? "Fitur ini tidak tersedia karena transaksi kadaluarsa. Silakan buat transaksi baru."
+                    : detail.pembayaran === "GAGAL"
+                      ? "Fitur ini tidak tersedia karena pembayaran gagal. Silakan coba bayar kembali untuk melanjutkan transaksi."
+                      : "Fitur ini tidak tersedia karena pembayaran tertunda. Silakan bayar untuk melanjutkan transaksi."}
+                </p>
+              </div>
+            </div>
 
-        <DistributionReportCard />
+            <div className="flex flex-col gap-3 w-full p-6 rounded-xl border border-neutral-200 bg-white shadow-sm">
+              <h2 className="text-[20px] font-bold text-neutral-900">
+                Laporan Distribusi
+              </h2>
+              <div className="flex w-full px-4 py-3 rounded-lg bg-[#FEF1DA] border border-[#FEF1DA]">
+                <p className="text-[16px] italic leading-[24px] text-neutral-900">
+                  {detail.pembayaran === "KADALUARSA"
+                    ? "Fitur ini tidak tersedia karena transaksi kadaluarsa. Silakan buat transaksi baru."
+                    : detail.pembayaran === "GAGAL"
+                      ? "Fitur ini tidak tersedia karena pembayaran gagal. Silakan coba bayar kembali untuk melanjutkan transaksi."
+                      : "Fitur ini tidak tersedia karena pembayaran tertunda. Silakan bayar untuk melanjutkan transaksi."}
+                </p>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

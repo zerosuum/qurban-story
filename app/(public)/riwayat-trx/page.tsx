@@ -2,9 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import StatusPembayaranBadge, {
-  PembayaranStatus,
-} from "@/components/ui/StatusPembayaranBadge";
+import StatusPembayaranBadge from "@/components/ui/StatusPembayaranBadge";
 import StatusPelaporanBadge, {
   PelaporanStatus,
 } from "@/components/ui/StatusPelaporanBadge";
@@ -90,7 +88,7 @@ type TransactionRow = {
   produk: string;
   tanggal: string;
   nominal: string;
-  pembayaran: PembayaranStatus;
+  pembayaran: string;
   pelaporan: PelaporanStatus;
 };
 
@@ -276,7 +274,12 @@ export default function RiwayatTransaksiPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusPembayaranBadge
-                        status={item.pembayaran}
+                        status={
+                          item.pembayaran === "TERTUNDA" ||
+                          item.pembayaran === "PAYMENT_PENDING"
+                            ? "MENUNGGU PEMBAYARAN"
+                            : item.pembayaran
+                        }
                         size="sm"
                       />
                     </td>
@@ -285,7 +288,6 @@ export default function RiwayatTransaksiPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex justify-center items-center h-full w-full">
-                        {/* FIX: Link pakai item.id */}
                         <Link
                           href={`/riwayat-trx/${item.id}`}
                           className="hover:opacity-70 transition-opacity"
