@@ -9,12 +9,10 @@ type TransactionDetail = {
   invoice: string;
   nominal: string;
   tanggal: string;
-  pembayaran:
-    | "BERHASIL"
-    | "GAGAL"
-    | "KADALUARSA"
-    | "TERTUNDA"
-    | "MENUNGGU PEMBAYARAN";
+  createdAt: string;
+  snapToken: string | null;
+  paymentMethod: string | null;
+  pembayaran: string;
 };
 
 function formatRupiah(value: string | number) {
@@ -27,6 +25,22 @@ function formatRupiah(value: string | number) {
   }).format(number);
 }
 
+function formatPaymentMethod(type: string | null) {
+  if (!type) return "-";
+
+  const methods: Record<string, string> = {
+    gopay: "GoPay",
+    qris: "QRIS",
+    shopeepay: "ShopeePay",
+    bank_transfer: "Virtual Account",
+    echannel: "Mandiri Bill",
+    cstore: "Minimarket",
+    credit_card: "Kartu Kredit",
+  };
+
+  return methods[type] || type.replace(/_/g, " ").toUpperCase();
+}
+
 export default function InvoicePage() {
   const params = useParams();
   const router = useRouter();
@@ -34,6 +48,7 @@ export default function InvoicePage() {
 
   const [detail, setDetail] = useState<TransactionDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [timeLeft, setTimeLeft] = useState<string>("00:00:00");
 
   useEffect(() => {
     if (!id) return;
@@ -51,6 +66,59 @@ export default function InvoicePage() {
     };
     fetchDetail();
   }, [id]);
+
+  const statusBayar =
+    detail?.pembayaran === "TERTUNDA"
+      ? "MENUNGGU PEMBAYARAN"
+      : detail?.pembayaran;
+
+  useEffect(() => {
+    if (!detail?.createdAt || statusBayar !== "MENUNGGU PEMBAYARAN") return;
+
+    const interval = setInterval(() => {
+      const targetTime =
+        new Date(detail.createdAt).getTime() + 24 * 60 * 60 * 1000;
+      const now = new Date().getTime();
+      const distance = targetTime - now;
+
+      if (distance < 0) {
+        setTimeLeft("00:00:00");
+        clearInterval(interval);
+        // window.location.reload();
+        return;
+      }
+
+      const h = Math.floor(
+        (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+      );
+      const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((distance % (1000 * 60)) / 1000);
+
+      setTimeLeft(
+        `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`,
+      );
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [detail, statusBayar]);
+
+  const handlePayNow = () => {
+    if (window.snap && detail?.snapToken) {
+      window.snap.pay(detail.snapToken, {
+        onSuccess: function () {
+          window.location.reload();
+        },
+        onPending: function () {
+          alert("Silakan selesaikan pembayaran Anda.");
+        },
+        onError: function () {
+          window.location.reload();
+        },
+      });
+    } else {
+      alert("Sistem sedang memuat atau token tidak ditemukan.");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -76,7 +144,7 @@ export default function InvoicePage() {
   let title;
   let description;
 
-  if (detail.pembayaran === "BERHASIL") {
+  if (statusBayar === "BERHASIL") {
     badgeColor = "bg-[#2D6A4F]";
     title = "Pembayaran Berhasil";
     description =
@@ -109,7 +177,7 @@ export default function InvoicePage() {
         </g>
       </svg>
     );
-  } else if (detail.pembayaran === "GAGAL") {
+  } else if (statusBayar === "GAGAL") {
     badgeColor = "bg-[#D32F2F]";
     title = "Pembayaran Gagal";
     description =
@@ -142,7 +210,7 @@ export default function InvoicePage() {
         </g>
       </svg>
     );
-  } else if (detail.pembayaran === "KADALUARSA") {
+  } else if (statusBayar === "KADALUARSA") {
     badgeColor = "bg-[#E67E22]";
     title = "Pembayaran Kadaluarsa";
     description =
@@ -163,7 +231,7 @@ export default function InvoicePage() {
       </svg>
     );
   } else {
-    // PENDING
+    // Default ke Menunggu Pembayaran
     badgeColor = "bg-[#3B82F6]";
     title = "Menunggu Pembayaran";
     description = "Silakan selesaikan pembayaran Anda sebelum waktu habis.";
@@ -206,8 +274,9 @@ export default function InvoicePage() {
           <div
             className={`flex px-6 py-2 justify-center items-center gap-[10px] rounded-full ${badgeColor}`}
           >
+            {/* Teks ngambil dari status yang diseragamin */}
             <span className="text-white font-sans text-[16px] font-bold uppercase tracking-wider">
-              {detail.pembayaran}
+              {statusBayar}
             </span>
           </div>
         </div>
@@ -245,7 +314,7 @@ export default function InvoicePage() {
               Metode Pembayaran
             </span>
             <span className="text-[#022D34] font-sans text-[18px] font-bold leading-[27px]">
-              Midtrans
+              {formatPaymentMethod(detail.paymentMethod)}
             </span>
           </div>
           <div className="flex justify-between items-center w-full">
@@ -258,6 +327,18 @@ export default function InvoicePage() {
           </div>
         </div>
 
+        {/* 🔥 BOX TIMER (KHUSUS MENUNGGU PEMBAYARAN) 🔥 */}
+        {statusBayar === "MENUNGGU PEMBAYARAN" && (
+          <div className="flex flex-col items-center justify-center p-4 gap-1 w-full rounded-xl bg-[#FEF1DA] border border-[#E67E22]/20">
+            <span className="font-sans text-[#044B57] text-[14px]">
+              Sisa Waktu Pembayaran
+            </span>
+            <span className="font-sans text-[#022D34] text-[20px] font-bold">
+              {timeLeft}
+            </span>
+          </div>
+        )}
+
         {/* Tombol Aksi */}
         <div className="flex gap-4 w-full">
           <button
@@ -269,22 +350,25 @@ export default function InvoicePage() {
 
           <button
             onClick={() => {
-              if (
-                detail.pembayaran === "BERHASIL" ||
-                detail.pembayaran === "MENUNGGU PEMBAYARAN"
-              ) {
+              if (statusBayar === "BERHASIL") {
                 router.push(`/riwayat-trx/${detail.id}`);
+              } else if (statusBayar === "MENUNGGU PEMBAYARAN") {
+                handlePayNow();
+              } else if (statusBayar === "GAGAL") {
+                router.push(`/checkout/${detail.id}`);
               } else {
                 router.push("/produk");
               }
             }}
             className="flex h-10 px-4 py-2 justify-center items-center gap-[10px] flex-1 rounded-xl bg-[#044B57] text-white text-center font-sans text-[16px] font-bold leading-[24px] hover:bg-primary-600 hover:shadow-md hover:shadow-neutral-200 active:scale-95 transition-all duration-200"
           >
-            {detail.pembayaran === "BERHASIL"
+            {statusBayar === "BERHASIL"
               ? "Lihat Detail Transaksi"
-              : detail.pembayaran === "MENUNGGU PEMBAYARAN"
-                ? "Cek Status"
-                : "Buat Transaksi Baru"}
+              : statusBayar === "MENUNGGU PEMBAYARAN"
+                ? "Bayar Sekarang"
+                : statusBayar === "GAGAL"
+                  ? "Coba Lagi"
+                  : "Buat Transaksi Baru"}
           </button>
         </div>
       </div>
