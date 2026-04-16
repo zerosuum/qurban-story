@@ -41,7 +41,14 @@ export async function POST(request: Request) {
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      include: { promos: { where: { isActive: true } } },
+      include: {
+        promos: { where: { isActive: true } },
+        species: {
+          select: {
+            maxParticipants: true,
+          },
+        },
+      },
     });
 
     if (!product) {
@@ -62,16 +69,82 @@ export async function POST(request: Request) {
     }
 
     const order = await prisma.$transaction(async (tx) => {
+      const maxParticipants = product.species.maxParticipants;
+      const isSharedQurban = maxParticipants > 1;
+
+      let targetGroupId: string | null = null;
+
+      if (isSharedQurban) {
+        let openGroup = await tx.animalGroup.findFirst({
+          where: {
+            productId: product.id,
+            status: "OPEN",
+            currentSlot: {
+              lt: maxParticipants,
+            },
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+          select: {
+            id: true,
+            currentSlot: true,
+            maxSlot: true,
+          },
+        });
+
+        if (!openGroup) {
+          openGroup = await tx.animalGroup.create({
+            data: {
+              productId: product.id,
+              maxSlot: maxParticipants,
+              status: "OPEN",
+            },
+            select: {
+              id: true,
+              currentSlot: true,
+              maxSlot: true,
+            },
+          });
+        }
+
+        targetGroupId = openGroup.id;
+      }
+
       const newOrder = await tx.order.create({
         data: {
           userId: session.user.id,
           productId: product.id,
+          animalGroupId: targetGroupId,
           donorName,
           donorPhone,
           totalPrice: finalPrice,
           status: "PAYMENT_PENDING",
         },
       });
+
+      if (targetGroupId) {
+        const groupState = await tx.animalGroup.findUnique({
+          where: { id: targetGroupId },
+          select: {
+            currentSlot: true,
+            maxSlot: true,
+          },
+        });
+
+        const nextSlot = (groupState?.currentSlot ?? 0) + 1;
+        const nextStatus = nextSlot >= (groupState?.maxSlot ?? maxParticipants)
+          ? "FULL"
+          : "OPEN";
+
+        await tx.animalGroup.update({
+          where: { id: targetGroupId },
+          data: {
+            currentSlot: nextSlot,
+            status: nextStatus,
+          },
+        });
+      }
 
       if (
         participants &&

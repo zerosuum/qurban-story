@@ -214,10 +214,18 @@ function normalizeUpdatePayload(body: unknown) {
 export async function handleListProducts(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const isActiveParam = searchParams.get("isActive");
+    let isActiveFilter: boolean | undefined;
+
+    if (isActiveParam !== null) {
+      isActiveFilter = isActiveParam.toLowerCase() === "true";
+    }
+
     const result = await listProducts({
       search: searchParams.get("search") ?? undefined,
       page: parsePositiveInt(searchParams.get("page"), 1),
       pageSize: parsePositiveInt(searchParams.get("pageSize"), 10),
+      isActive: isActiveFilter,
     });
 
     return NextResponse.json(result, { status: 200 });

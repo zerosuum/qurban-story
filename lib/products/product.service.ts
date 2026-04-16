@@ -5,6 +5,7 @@ type ProductQuery = {
   search?: string;
   page?: number;
   pageSize?: number;
+  isActive?: boolean;
 };
 
 type ProductPayload = {
@@ -134,15 +135,18 @@ export async function listProducts(query: ProductQuery) {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const where: Prisma.ProductWhereInput = keyword
-    ? {
-      OR: [
-        { name: { contains: keyword, mode: "insensitive" } },
-        { weight: { contains: keyword, mode: "insensitive" } },
-        { description: { contains: keyword, mode: "insensitive" } },
-      ],
-    }
-    : {};
+  const where: Prisma.ProductWhereInput = {
+    ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
+    ...(keyword
+      ? {
+        OR: [
+          { name: { contains: keyword, mode: "insensitive" } },
+          { weight: { contains: keyword, mode: "insensitive" } },
+          { description: { contains: keyword, mode: "insensitive" } },
+        ],
+      }
+      : {}),
+  };
 
   const [products, total] = await prisma.$transaction([
     prisma.product.findMany({

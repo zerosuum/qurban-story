@@ -57,9 +57,13 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
     const [isEditMode, setIsEditMode] = useState(false);
     const [tahap2Date, setTahap2Date] = useState("");
     const [tahap3Date, setTahap3Date] = useState("");
+    const [existingPhotoUrls, setExistingPhotoUrls] = useState<string[]>([]);
+    const [existingVideoUrl, setExistingVideoUrl] = useState<string | null>(null);
     const [slaughterFiles, setSlaughterFiles] = useState<File[]>([]);
     const [distributionVideoFile, setDistributionVideoFile] = useState<File | null>(null);
     const [distributionReportFile, setDistributionReportFile] = useState<File | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     const slaughterPreviews = useMemo(() => {
         return slaughterFiles.map((file) => ({
@@ -112,6 +116,8 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                 const result = (await response.json()) as DetailResponse;
                 if (!mounted) return;
                 setDetail(result.data);
+                setExistingPhotoUrls(result.data.documentation.photoUrls ?? []);
+                setExistingVideoUrl(result.data.documentation.videoUrl ?? null);
             } catch (error) {
                 if (!mounted) return;
                 setErrorMessage(error instanceof Error ? error.message : "Gagal memuat detail transaksi.");
@@ -164,20 +170,163 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
         event.target.value = "";
     };
 
+    const handleReplaceExistingPhoto = async (index: number, file: File | null) => {
+        if (!file) {
+            return;
+        }
+
+        try {
+            const nextDataUrl = await fileToDataUrl(file);
+            setExistingPhotoUrls((prev) => prev.map((url, i) => (i === index ? nextDataUrl : url)));
+        } catch {
+            setErrorMessage("Gagal mengganti foto dokumentasi.");
+        }
+    };
+
+    const handleReplaceNewPhoto = (index: number, file: File | null) => {
+        if (!file) {
+            return;
+        }
+
+        setSlaughterFiles((prev) => prev.map((item, i) => (i === index ? file : item)));
+    };
+
     const removeSlaughterFile = (index: number) => {
-        setSlaughterFiles((prev) => prev.filter((_, fileIndex) => fileIndex !== index));
+        if (index < existingPhotoUrls.length) {
+            setExistingPhotoUrls((prev) => prev.filter((_, i) => i !== index));
+            return;
+        }
+
+        const fileIndex = index - existingPhotoUrls.length;
+        setSlaughterFiles((prev) => prev.filter((_, i) => i !== fileIndex));
     };
 
     const handleDistributionVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0] ?? null;
         setDistributionVideoFile(file);
+        if (file) {
+            setExistingVideoUrl(null);
+        }
         event.target.value = "";
+    };
+
+    const handleRemoveVideo = () => {
+        setDistributionVideoFile(null);
+        setExistingVideoUrl(null);
     };
 
     const handleDistributionReportChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0] ?? null;
         setDistributionReportFile(file);
         event.target.value = "";
+    };
+
+    const fileToDataUrl = (file: File) =>
+        new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result ?? ""));
+            reader.onerror = () => reject(new Error(`Gagal membaca file ${file.name}`));
+            reader.readAsDataURL(file);
+        });
+
+    const handleSaveChanges = async () => {
+        if (!detail) {
+            return;
+        }
+
+        setIsSaving(true);
+        setErrorMessage(null);
+        setSuccessMessage(null);
+
+        try {
+            if (tahap2Date || tahap3Date) {
+                const reportingResponse = await fetch("/api/transactions", {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        orderIds: [detail.id],
+                        tahap2Date,
+                        tahap3Date,
+                    }),
+                });
+
+                const reportingResult = (await reportingResponse.json()) as { message?: string };
+
+                if (!reportingResponse.ok) {
+                    throw new Error(reportingResult.message ?? "Gagal menyimpan update pelaporan.");
+                }
+            }
+
+            const newPhotoItems = await Promise.all(
+                slaughterFiles
+                    .filter((file) => file.type.startsWith("image/"))
+                    .map(async (file) => ({
+                        fileName: file.name,
+                        dataUrl: await fileToDataUrl(file),
+                    })),
+            );
+
+            const mergedPhotoItems = [
+                ...existingPhotoUrls.map((url, index) => ({
+                    fileName: `existing-${index + 1}.jpg`,
+                    dataUrl: url,
+                })),
+                ...newPhotoItems,
+            ];
+
+            let mergedVideoItem: { fileName: string; dataUrl: string } | null = null;
+
+            if (distributionVideoFile) {
+                mergedVideoItem = {
+                    fileName: distributionVideoFile.name,
+                    dataUrl: await fileToDataUrl(distributionVideoFile),
+                };
+            } else if (existingVideoUrl) {
+                mergedVideoItem = {
+                    fileName: "existing-video.mp4",
+                    dataUrl: existingVideoUrl,
+                };
+            }
+
+            const documentationResponse = await fetch(`/api/transactions/${detail.id}`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    photoItems: mergedPhotoItems,
+                    videoItem: mergedVideoItem,
+                }),
+            });
+
+            const documentationResult = (await documentationResponse.json()) as { message?: string };
+
+            if (!documentationResponse.ok) {
+                throw new Error(documentationResult.message ?? "Gagal memperbarui dokumentasi transaksi.");
+            }
+
+            setIsEditMode(false);
+            setSlaughterFiles([]);
+            setDistributionVideoFile(null);
+            setDistributionReportFile(null);
+            setTahap2Date("");
+            setTahap3Date("");
+            setSuccessMessage("Perubahan berhasil disimpan dan dokumentasi berhasil didistribusikan.");
+
+            const refreshed = await fetch(`/api/transactions/${detail.id}`);
+            if (refreshed.ok) {
+                const refreshedResult = (await refreshed.json()) as DetailResponse;
+                setDetail(refreshedResult.data);
+                setExistingPhotoUrls(refreshedResult.data.documentation.photoUrls ?? []);
+                setExistingVideoUrl(refreshedResult.data.documentation.videoUrl ?? null);
+            }
+        } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : "Gagal menyimpan perubahan.");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -193,21 +342,29 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                         type="button"
                         onClick={() => {
                             if (isEditMode) {
-                                setIsEditMode(false);
+                                void handleSaveChanges();
                                 return;
                             }
 
+                            setSuccessMessage(null);
+                            setErrorMessage(null);
+                            setExistingPhotoUrls(detail?.documentation.photoUrls ?? []);
+                            setExistingVideoUrl(detail?.documentation.videoUrl ?? null);
+                            setSlaughterFiles([]);
+                            setDistributionVideoFile(null);
                             setIsEditMode(true);
                         }}
+                        disabled={isSaving}
                         className="h-10 cursor-pointer rounded-xl bg-primary-500 px-6 text-sm font-semibold text-white hover:bg-primary-600"
                     >
-                        {actionButtonLabel}
+                        {isSaving ? "Menyimpan..." : actionButtonLabel}
                     </button>
                 </div>
 
                 <section className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
                     {isLoading && <p className="text-neutral-500">Memuat detail transaksi...</p>}
                     {!isLoading && errorMessage && <p className="text-red-500">{errorMessage}</p>}
+                    {!isLoading && successMessage && <p className="text-green-600">{successMessage}</p>}
 
                     {!isLoading && detail && (
                         <div className="flex flex-col gap-4">
@@ -311,55 +468,84 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                                 <input
                                     type="file"
                                     multiple
-                                    accept="image/*,video/*"
+                                    accept="image/*"
                                     onChange={handleSlaughterFilesChange}
                                     className="hidden"
                                 />
                                 <ImagePlaceholderIcon />
                                 <p className="text-[11px] text-neutral-800">
-                                    Anda dapat mengunggah banyak file atau satu folder sekaligus
+                                    Upload foto dokumentasi untuk pelaporan transaksi yang sedang dipilih.
                                 </p>
                             </label>
 
                             <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                                {[0, 1, 2, 3].map((index) => {
-                                    const item = slaughterPreviews[index];
-                                    const placeholderIsVideo = index === 2;
+                                {existingPhotoUrls.map((url, index) => (
+                                    <div key={`existing-${index}`} className="relative h-31 overflow-hidden rounded-xl bg-neutral-100">
+                                        <img
+                                            src={url}
+                                            alt={`Dokumentasi existing ${index + 1}`}
+                                            className="h-full w-full object-cover"
+                                        />
+
+                                        <div className="absolute bottom-2 left-2 right-2 flex gap-2">
+                                            <label className="inline-flex cursor-pointer items-center rounded bg-black/70 px-2 py-1 text-[10px] text-white">
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={(event) => void handleReplaceExistingPhoto(index, event.target.files?.[0] ?? null)}
+                                                />
+                                                Ganti
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeSlaughterFile(index)}
+                                                className="cursor-pointer rounded bg-black/70 px-2 py-1 text-[10px] text-white"
+                                            >
+                                                Hapus
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {slaughterPreviews.map((item, index) => {
+                                    const absoluteIndex = existingPhotoUrls.length + index;
 
                                     return (
-                                        <div key={index} className="relative h-31 overflow-hidden rounded-xl bg-neutral-100">
-                                            {item ? (
-                                                item.isVideo ? (
-                                                    <video
-                                                        src={item.previewUrl}
-                                                        controls
-                                                        className="h-full w-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <img
-                                                        src={item.previewUrl}
-                                                        alt={`Dokumentasi ${index + 1}`}
-                                                        className="h-full w-full object-cover"
-                                                    />
-                                                )
-                                            ) : (
-                                                <div className="flex h-full w-full items-center justify-center">
-                                                    {placeholderIsVideo ? <VideoPlaceholderIcon /> : <ImagePlaceholderIcon />}
-                                                </div>
-                                            )}
+                                        <div key={`new-${index}`} className="relative h-31 overflow-hidden rounded-xl bg-neutral-100">
+                                            <img
+                                                src={item.previewUrl}
+                                                alt={`Dokumentasi baru ${index + 1}`}
+                                                className="h-full w-full object-cover"
+                                            />
 
-                                            {item && (
+                                            <div className="absolute bottom-2 left-2 right-2 flex gap-2">
+                                                <label className="inline-flex cursor-pointer items-center rounded bg-black/70 px-2 py-1 text-[10px] text-white">
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        className="hidden"
+                                                        onChange={(event) => handleReplaceNewPhoto(index, event.target.files?.[0] ?? null)}
+                                                    />
+                                                    Ganti
+                                                </label>
                                                 <button
                                                     type="button"
-                                                    onClick={() => removeSlaughterFile(index)}
-                                                    className="absolute right-2 top-2 cursor-pointer rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white"
+                                                    onClick={() => removeSlaughterFile(absoluteIndex)}
+                                                    className="cursor-pointer rounded bg-black/70 px-2 py-1 text-[10px] text-white"
                                                 >
                                                     Hapus
                                                 </button>
-                                            )}
+                                            </div>
                                         </div>
                                     );
                                 })}
+
+                                {existingPhotoUrls.length === 0 && slaughterPreviews.length === 0 && (
+                                    <div className="col-span-2 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-4 text-center text-sm text-neutral-500 lg:col-span-4">
+                                        Belum ada foto dokumentasi.
+                                    </div>
+                                )}
                             </div>
 
                             <p className="mt-3 text-neutral-700">Video pendistribusian</p>
@@ -377,10 +563,26 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                                         controls
                                         className="h-full w-full object-cover"
                                     />
+                                ) : existingVideoUrl ? (
+                                    <video
+                                        src={existingVideoUrl}
+                                        controls
+                                        className="h-full w-full object-cover"
+                                    />
                                 ) : (
                                     <VideoPlaceholderIcon />
                                 )}
                             </label>
+
+                            {(distributionVideoPreviewUrl || existingVideoUrl) && (
+                                <button
+                                    type="button"
+                                    onClick={handleRemoveVideo}
+                                    className="mt-2 h-10 rounded-xl border border-red-300 px-4 text-sm font-semibold text-red-500 hover:bg-red-50"
+                                >
+                                    Hapus Video
+                                </button>
+                            )}
                         </>
                     ) : (
                         <>
