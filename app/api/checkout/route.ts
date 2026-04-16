@@ -186,6 +186,11 @@ export async function POST(request: Request) {
 
     const snapResponse = await snap.createTransaction(parameter);
 
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { snapToken: snapResponse.token },
+    });
+
     return NextResponse.json({
       token: snapResponse.token,
       orderId: order.id,

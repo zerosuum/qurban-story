@@ -110,7 +110,6 @@ export default function CheckoutPage() {
       }
 
       // Panggil Snap Midtrans pakai token dari Backend
-      // @ts-expect-error - snap object is injected via Next/Script in layout.tsx
       window.snap.pay(data.token, {
         onSuccess: function (result: unknown) {
           console.log("Success:", result);
