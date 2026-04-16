@@ -62,8 +62,9 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
     const [paymentFilter, setPaymentFilter] = useState<PaymentStatus | "Semua Pembayaran">("Semua Pembayaran");
     const [reportFilter, setReportFilter] = useState<ReportingStatus | "Semua Pelaporan">("Semua Pelaporan");
     const [page, setPage] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [showSelectionWarning, setShowSelectionWarning] = useState(false);
@@ -72,9 +73,12 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
     const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false);
     const [tahap2Date, setTahap2Date] = useState("");
     const [tahap3Date, setTahap3Date] = useState("");
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [isAllPagesSelected, setIsAllPagesSelected] = useState(false);
 
     const isTransaksiMode = mode === "transaksi";
-    const allSelected = rows.length > 0 && rows.every((row) => selectedIds.includes(row.id));
+    const selectedCount = isAllPagesSelected ? totalItems : selectedIds.length;
+    const allSelected = isAllPagesSelected || (rows.length > 0 && rows.every((row) => selectedIds.includes(row.id)));
     const colSpan = isTransaksiMode ? 8 : 8;
 
     const goPrev = () => setPage((prev) => Math.max(1, prev - 1));
@@ -85,8 +89,17 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
     }, [search, paymentFilter, reportFilter]);
 
     useEffect(() => {
+        if (isAllPagesSelected) {
+            return;
+        }
+
         setSelectedIds((prev) => prev.filter((id) => rows.some((row) => row.id === id)));
-    }, [rows]);
+    }, [rows, isAllPagesSelected]);
+
+    useEffect(() => {
+        setSelectedIds([]);
+        setIsAllPagesSelected(false);
+    }, [search, paymentFilter, reportFilter]);
 
     useEffect(() => {
         if (!showSelectionWarning) {
@@ -106,6 +119,7 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
         const fetchTransactions = async () => {
             setIsLoading(true);
             setFetchError(null);
+            setRows([]);
 
             try {
                 const query = new URLSearchParams({
@@ -136,6 +150,7 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
                 const result = (await response.json()) as TransactionsApiResponse;
 
                 setRows(result.data);
+                setTotalItems(result.pagination.total);
                 setTotalPages(Math.max(1, result.pagination.totalPages ?? 1));
                 onSummaryChange?.(result.summary);
             } catch (error) {
@@ -144,24 +159,29 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
                 }
 
                 setRows([]);
+                setTotalItems(0);
                 setFetchError("Data transaksi gagal dimuat.");
                 onSummaryChange?.({ total: 0, berhasil: 0, tertunda: 0, gagal: 0 });
             } finally {
-                setIsLoading(false);
+                if (!controller.signal.aborted) {
+                    setIsLoading(false);
+                }
             }
         };
 
         fetchTransactions();
 
         return () => controller.abort();
-    }, [page, search, paymentFilter, reportFilter, onSummaryChange]);
+    }, [page, search, paymentFilter, reportFilter, onSummaryChange, refreshKey]);
 
     const toggleSelectAll = () => {
         if (allSelected) {
             setSelectedIds([]);
+            setIsAllPagesSelected(false);
             return;
         }
 
+        setIsAllPagesSelected(true);
         setSelectedIds(rows.map((row) => row.id));
     };
 
@@ -176,7 +196,7 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
     };
 
     const handleUpdatePelaporan = () => {
-        if (selectedIds.length === 0) {
+        if (selectedCount === 0) {
             setShowSelectionWarning(true);
             return;
         }
@@ -193,13 +213,47 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
     const handleConfirmUpdate = async () => {
         setIsSubmittingUpdate(true);
 
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        try {
+            const response = await fetch("/api/transactions", {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    orderIds: isAllPagesSelected ? [] : selectedIds,
+                    applyToFiltered: isAllPagesSelected,
+                    filters: {
+                        search,
+                        paymentStatus: paymentFilter,
+                        reportingStatus: reportFilter,
+                    },
+                    tahap2Date,
+                    tahap3Date,
+                }),
+            });
 
-        setIsSubmittingUpdate(false);
-        setIsConfirmOpen(false);
-        setSelectedIds([]);
-        setTahap2Date("");
-        setTahap3Date("");
+            const result = (await response.json()) as { message?: string };
+
+            if (!response.ok) {
+                throw new Error(result.message ?? "Gagal memperbarui status pelaporan.");
+            }
+
+            setIsConfirmOpen(false);
+            setSelectedIds([]);
+            setIsAllPagesSelected(false);
+            setTahap2Date("");
+            setTahap3Date("");
+            setFetchError(null);
+            setRefreshKey((prev) => prev + 1);
+        } catch (error) {
+            setFetchError(
+                error instanceof Error
+                    ? error.message
+                    : "Gagal memperbarui status pelaporan.",
+            );
+        } finally {
+            setIsSubmittingUpdate(false);
+        }
     };
 
     return (
@@ -282,8 +336,9 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
                                         {isTransaksiMode && (
                                             <input
                                                 type="checkbox"
-                                                checked={selectedIds.includes(item.id)}
+                                                checked={isAllPagesSelected || selectedIds.includes(item.id)}
                                                 onChange={() => toggleSelectRow(item.id)}
+                                                disabled={isAllPagesSelected}
                                                 className="h-4 w-4 cursor-pointer rounded border-neutral-300 accent-[#F2C879]"
                                             />
                                         )}
@@ -322,8 +377,11 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
 
                         {isLoading && (
                             <tr>
-                                <td colSpan={colSpan} className="px-4 py-6 text-center text-neutral-400">
-                                    Memuat data transaksi...
+                                <td colSpan={colSpan} className="px-4 py-12">
+                                    <div className="flex flex-col items-center justify-center gap-3">
+                                        <div className="inline-flex h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-primary-500"></div>
+                                        <p className="text-center font-medium text-neutral-600">Memuat data transaksi...</p>
+                                    </div>
                                 </td>
                             </tr>
                         )}
@@ -349,7 +407,11 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
 
             <div className="mt-4 flex items-center justify-between gap-4">
                 <p className="text-sm text-neutral-700">
-                    {isTransaksiMode && selectedIds.length > 0 ? `${selectedIds.length} transaksi dipilih` : ""}
+                    {isTransaksiMode && selectedCount > 0
+                        ? isAllPagesSelected
+                            ? `${selectedCount} transaksi dipilih (semua halaman)`
+                            : `${selectedCount} transaksi dipilih`
+                        : ""}
                 </p>
 
                 <div className="flex items-center justify-end gap-6">
@@ -378,7 +440,7 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
             </div>
 
             {isTransaksiMode && showSelectionWarning && (
-                <div className="fixed bottom-5 right-5 z-[120] w-[min(560px,calc(100vw-2rem))] rounded-xl border border-[#E67E22] bg-[#FFF4E5] px-5 py-4 text-[#E67E22] shadow-sm">
+                <div className="fixed bottom-5 right-5 z-120 w-[min(560px,calc(100vw-2rem))] rounded-xl border border-[#E67E22] bg-[#FFF4E5] px-5 py-4 text-[#E67E22] shadow-sm">
                     <div className="flex items-center gap-3">
                         <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#E67E22] text-base font-bold">!</span>
                         <div>
@@ -391,7 +453,7 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
 
             <UpdatePelaporanModal
                 isOpen={isTransaksiMode && isProgressModalOpen}
-                selectedCount={selectedIds.length}
+                selectedCount={selectedCount}
                 tahap2Date={tahap2Date}
                 tahap3Date={tahap3Date}
                 onChangeTahap2Date={setTahap2Date}

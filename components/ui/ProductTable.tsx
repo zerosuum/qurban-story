@@ -143,7 +143,7 @@ export default function ProductTable({ searchQuery, refreshKey = 0 }: ProductTab
     const [products, setProducts] = useState<ProductRow[]>([]);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [localRefreshKey, setLocalRefreshKey] = useState(0);
 
@@ -181,6 +181,7 @@ export default function ProductTable({ searchQuery, refreshKey = 0 }: ProductTab
         const fetchProducts = async () => {
             setIsLoading(true);
             setFetchError(null);
+            setProducts([]);
 
             try {
                 const query = new URLSearchParams({
@@ -211,7 +212,9 @@ export default function ProductTable({ searchQuery, refreshKey = 0 }: ProductTab
                 setProducts([]);
                 setFetchError("Data produk gagal dimuat.");
             } finally {
-                setIsLoading(false);
+                if (!controller.signal.aborted) {
+                    setIsLoading(false);
+                }
             }
         };
 
@@ -554,8 +557,11 @@ export default function ProductTable({ searchQuery, refreshKey = 0 }: ProductTab
 
                             {isLoading && (
                                 <tr>
-                                    <td colSpan={9} className="px-4 py-6 text-center text-neutral-400">
-                                        Memuat data produk...
+                                    <td colSpan={9} className="px-4 py-12">
+                                        <div className="flex flex-col items-center justify-center gap-3">
+                                            <div className="inline-flex h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-primary-500"></div>
+                                            <p className="text-center font-medium text-neutral-600">Memuat data produk...</p>
+                                        </div>
                                     </td>
                                 </tr>
                             )}

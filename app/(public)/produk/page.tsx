@@ -10,6 +10,7 @@ type ProductApiResponse = {
   price: string;
   promoPrice: string | null;
   images: { imageUrl: string; isPrimary: boolean }[];
+  isActive?: boolean;
 };
 
 function formatRupiah(value: string | number) {
@@ -25,20 +26,33 @@ export default function ProdukPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchProducts = async () => {
+      setIsLoading(true);
+      setProducts([]);
+
       try {
-        const res = await fetch("/api/products?pageSize=20");
+        const res = await fetch("/api/products?pageSize=20&isActive=true", {
+          signal: controller.signal,
+        });
         if (!res.ok) throw new Error("Gagal fetch produk");
         const json = await res.json();
         setProducts(json.data || []);
       } catch (error) {
-        console.error(error);
+        if ((error as Error).name !== "AbortError") {
+          console.error(error);
+        }
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     };
 
     void fetchProducts();
+
+    return () => controller.abort();
   }, []);
 
   return (
