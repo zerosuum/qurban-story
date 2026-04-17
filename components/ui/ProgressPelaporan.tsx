@@ -79,7 +79,14 @@ const ProgressStep = ({
   );
 };
 
-export default function ProgressPelaporan() {
+// 🔥 FIX: Menerima props status dari halaman DetailTransaksiPage
+export default function ProgressPelaporan({ status = "Belum Dimulai" }: { status?: string }) {
+  
+  // Logika penentu status per tahap
+  const isStep1Done = status === "Tahap 1/3" || status === "Tahap 2/3" || status === "Selesai";
+  const isStep2Done = status === "Tahap 2/3" || status === "Selesai";
+  const isStep3Done = status === "Selesai";
+
   return (
     // Container Utama (w: 792px, p: 24px, rounded: 12px, border, shadow)
     <div className="flex flex-col items-start w-full max-w-[792px] p-6 rounded-xl border border-neutral-200 bg-white shadow-[0_2px_4px_-2px_rgba(24,39,75,0.12),0_4px_4px_-2px_rgba(24,39,75,0.08)]">
@@ -94,23 +101,24 @@ export default function ProgressPelaporan() {
           tahap="1"
           judul="Disembelih"
           deskripsi="Hewan qurban telah disembelih sesuai syariat Islam."
-          tanggal="27 Mei 2026 08:30 WIB"
-          status="success"
+          tanggal={isStep1Done ? "27 Mei 2026 08:30 WIB" : "-"}
+          status={isStep1Done ? "success" : "pending"}
         />
 
         <ProgressStep
           tahap="2"
           judul="Distribusi"
           deskripsi="Daging qurban sedang didistribusikan kepada penerima manfaat."
-          tanggal="27 Mei 2026 14:30 WIB"
-          status="success"
+          tanggal={isStep2Done ? "27 Mei 2026 14:30 WIB" : "-"}
+          status={isStep2Done ? "success" : "pending"}
         />
 
         <ProgressStep
           tahap="3"
           judul="Selesai"
-          deskripsi="Proses qurban telah selesai! Terimakasih telah mempercayai Qurban Story."
-          status="success"
+          deskripsi={isStep3Done ? "Proses qurban telah selesai! Terimakasih telah mempercayai Qurban Story." : "Menunggu proses pendistribusian selesai."}
+          tanggal={isStep3Done ? "27 Mei 2026 16:00 WIB" : "-"}
+          status={isStep3Done ? "success" : "pending"}
           isLast={true}
         />
       </div>
