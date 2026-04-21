@@ -19,8 +19,8 @@ export default function PilihanHewanCard({ image, name, price, weight, href }: P
                 <p className="text-primary-600 text-lg font-bold">{price}</p>
                 <p className="text-primary-900 text-[16px]">{weight}</p>
             </div>
-            <Link href={href || "#"} className="mt-4 w-full">
-                <Button variant="primary">
+            <Link href={href || "#"} className="mt-4 w-58">
+                <Button variant="primary" className="w-full">
                     Lihat Detail
                 </Button>
             </Link>
