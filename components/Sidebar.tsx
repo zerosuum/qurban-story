@@ -2,18 +2,43 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+
+type SidebarRole = "ADMIN" | "SUPERADMIN" | "CUSTOMER" | string;
+
+type SidebarMenu = {
+    name: string;
+    href: string;
+    icons: string;
+    allowedRoles?: SidebarRole[];
+};
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const { data: session } = useSession();
 
-    const menus = [
+    const role = session?.user?.role;
+
+    const menus: SidebarMenu[] = [
         { name: "Dashboard", href: "/admin/dashboard", icons: "dashboard" },
         { name: "Transaksi", href: "/admin/transaksi", icons: "request_quote" },
         { name: "Produk", href: "/admin/product", icons: "shopping_bag" },
         { name: "Customer", href: "/admin/customer", icons: "customer" },
-        { name: "Manajemen Admin", href: "/admin/dashboard/manajemen-admin", icons: "admin_panel_settings" },
+        { name: "Manajemen Admin", href: "/admin/manajemen-admin", icons: "admin_panel_settings", allowedRoles: ["SUPERADMIN"] },
         { name: "Dokumentasi Distribusi", href: "/admin/dokumentasi", icons: "videocam" },
     ];
+
+    const filteredMenus = menus.filter((menu) => {
+        if (!menu.allowedRoles) {
+            return true;
+        }
+
+        if (!role) {
+            return false;
+        }
+
+        return menu.allowedRoles.includes(role);
+    });
 
     return (
         <aside className="fixed inset-y-0 left-0 z-40 w-66 bg-white border-r border-secondary-200 h-screen flex flex-col justify-between overflow-y-auto">
@@ -24,7 +49,7 @@ export default function Sidebar() {
                 <div className="px-2 mt-2">
                     <p className="font-bold py-1 px-4">Menu Utama</p>
                     <nav className="flex flex-col gap-1 ">
-                        {menus.map((menu) => (
+                        {filteredMenus.map((menu) => (
                             <Link
                                 key={menu.href}
                                 href={menu.href}

@@ -1,6 +1,19 @@
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 
+const SUPER_ADMIN_EMAILS = [
+  "nawwafzayyan27@gmail.com",
+  "nawwafzayyanmusyafa@mail.ugm.ac.id",
+];
+
+function isSuperAdminEmail(email: string) {
+  return SUPER_ADMIN_EMAILS.includes(email.toLowerCase());
+}
+
+function normalizeEmail(email?: string | null) {
+  return (email ?? "").trim().toLowerCase();
+}
+
 export const authOptions = {
 
   providers: [
@@ -17,7 +30,10 @@ export const authOptions = {
     async signIn({ user, account }: any) {
       if (account?.provider === "google") {
         try {
-          const existingUser = await prisma.user.findUnique({
+          const normalizedEmail = normalizeEmail(user.email);
+          const shouldBeSuperAdmin = isSuperAdminEmail(normalizedEmail);
+
+          const existingByProvider = await prisma.user.findUnique({
             where: {
               provider_providerId: {
                 provider: "google",
@@ -26,17 +42,66 @@ export const authOptions = {
             },
           });
 
+          const existingByEmail = !existingByProvider && normalizedEmail
+            ? await prisma.user.findFirst({
+              where: {
+                email: {
+                  equals: normalizedEmail,
+                  mode: "insensitive",
+                },
+              },
+            })
+            : null;
+
+          const existingUser = existingByProvider ?? existingByEmail;
+
           if (!existingUser) {
             await prisma.user.create({
               data: {
                 name: user.name || "User",
-                email: user.email || "",
+                email: normalizedEmail,
                 provider: "google",
                 providerId: account.providerAccountId,
-                role: "CUSTOMER",
+                role: shouldBeSuperAdmin ? "SUPERADMIN" : "CUSTOMER",
               },
             });
+          } else {
+            const shouldUpdateRole = shouldBeSuperAdmin && existingUser.role !== "SUPERADMIN";
+            const shouldUpdateName = Boolean(user.name && user.name !== existingUser.name);
+            const shouldUpdateEmail = Boolean(normalizedEmail && normalizedEmail !== existingUser.email);
+            const shouldUpdateProvider =
+              existingUser.provider !== "google" || existingUser.providerId !== account.providerAccountId;
+
+            if (shouldUpdateRole || shouldUpdateName || shouldUpdateEmail || shouldUpdateProvider) {
+              await prisma.user.update({
+                where: { id: existingUser.id },
+                data: {
+                  ...(shouldUpdateRole ? { role: "SUPERADMIN" } : {}),
+                  ...(shouldUpdateName ? { name: user.name } : {}),
+                  ...(shouldUpdateEmail ? { email: normalizedEmail } : {}),
+                  ...(shouldUpdateProvider ? {
+                    provider: "google",
+                    providerId: account.providerAccountId,
+                  } : {}),
+                },
+              });
+            }
           }
+
+          await prisma.user.updateMany({
+            where: {
+              OR: SUPER_ADMIN_EMAILS.map((email) => ({
+                email: {
+                  equals: email,
+                  mode: "insensitive",
+                },
+              })),
+            },
+            data: {
+              role: "SUPERADMIN",
+            },
+          });
+
           return true;
         } catch (error) {
           console.error("Gagal verifikasi/buat user:", error);
@@ -47,20 +112,32 @@ export const authOptions = {
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async jwt({ token, account }: any) {
-      if (account) {
-        const dbUser = await prisma.user.findUnique({
-          where: {
-            provider_providerId: {
-              provider: "google",
-              providerId: account.providerAccountId,
+      const dbUser =
+        typeof token.email === "string"
+          ? await prisma.user.findFirst({
+            where: {
+              email: {
+                equals: normalizeEmail(token.email),
+                mode: "insensitive",
+              },
             },
-          },
-        });
-        if (dbUser) {
-          token.id = dbUser.id;
-          token.role = dbUser.role;
-        }
+          })
+          : account
+            ? await prisma.user.findUnique({
+              where: {
+                provider_providerId: {
+                  provider: "google",
+                  providerId: account.providerAccountId,
+                },
+              },
+            })
+            : null;
+
+      if (dbUser) {
+        token.id = dbUser.id;
+        token.role = dbUser.role;
       }
+
       return token;
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

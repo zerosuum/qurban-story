@@ -7,9 +7,12 @@ import { useState } from "react";
 import LogoutModal from "@/components/ui/LogoutModal";
 
 export default function Navbar() {
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   const pathname = usePathname();
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
+
+  const role = session?.user?.role;
+  const dashboardHref = role === "ADMIN" || role === "SUPERADMIN" ? "/admin/dashboard" : "/dashboard";
 
   const navItem =
     "px-3 py-2 transition-colors duration-200 ease-in-out font-sans";
@@ -39,8 +42,8 @@ export default function Navbar() {
           {/* Kalau udah login muncul "Dashboard", kalau belum "Beranda" */}
           {status === "authenticated" ? (
             <Link
-              href="/dashboard"
-              className={`${navItem} ${pathname === "/dashboard" ? active : inactive}`}
+              href={dashboardHref}
+              className={`${navItem} ${pathname === "/dashboard" || pathname.startsWith("/admin/dashboard") ? active : inactive}`}
             >
               Dashboard
             </Link>
@@ -75,7 +78,7 @@ export default function Navbar() {
         {/* Auth Section */}
         <div className="flex items-center gap-3">
           {status === "loading" && (
-            <div className="w-[180px] h-[44px] bg-neutral-100 rounded-xl animate-pulse" />
+            <div className="h-11 w-45 rounded-xl bg-neutral-100 animate-pulse" />
           )}
 
           {status === "unauthenticated" && (
