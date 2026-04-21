@@ -1,16 +1,22 @@
 "use client"
 
+import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 
 export default function AdminNavbar() {
     const pathname = usePathname();
+    const { data: session } = useSession();
 
-    const adminName = "SuperAdmin"
-    const adminEmail = "superadmin@qurbanstory.com"
+    const adminName = session?.user?.name ?? "Admin";
+    const adminEmail = session?.user?.email ?? "-";
 
     const pageTitle = (() => {
         if (pathname.startsWith("/admin/transaksi")) return "Manajemen Transaksi";
         if (pathname.startsWith("/admin/product")) return "Manajemen Produk";
+        if (pathname.startsWith("/admin/customer")) return "Manajemen Customer";
+        if (pathname.startsWith("/admin/manajemen-admin")) return "Manajemen Admin";
+        if (pathname.startsWith("/admin/dokumentasi")) return "Dokumentasi Distribusi";
+        if (pathname.startsWith("/admin/profile")) return "Profil Saya";
         if (pathname.startsWith("/admin/dashboard")) return "Dashboard";
         return "Admin";
     })();
@@ -26,7 +32,7 @@ export default function AdminNavbar() {
                 </div>
                 <div>
                     <p>{adminName}</p>
-                    <p>{adminEmail}</p>
+                    <p className="text-sm text-neutral-500">{adminEmail}</p>
                 </div>
             </div>
         </div>

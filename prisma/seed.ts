@@ -21,6 +21,11 @@ const prisma = new PrismaClient({
 async function main() {
   console.log("Starting database seed...");
 
+  const superAdminEmails = [
+    "nawwafzayyan27@gmail.com",
+    "nawwafzayyanmusyafa@mail.ugm.ac.id",
+  ];
+
   await prisma.animalSpecies.createMany({
     data: [
       {
@@ -37,6 +42,20 @@ async function main() {
       },
     ],
     skipDuplicates: true,
+  });
+
+  await prisma.user.updateMany({
+    where: {
+      OR: superAdminEmails.map((email) => ({
+        email: {
+          equals: email,
+          mode: "insensitive",
+        },
+      })),
+    },
+    data: {
+      role: "SUPERADMIN",
+    },
   });
 
   console.log("Animal species seeded successfully");
