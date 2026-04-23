@@ -10,6 +10,8 @@ import {
     updateTransactionDocumentations,
     uploadSlaughterDocumentationByFolders,
 } from "@/lib/transactions/transaction.service";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 function parsePositiveInt(value: string | null, defaultValue: number) {
     if (!value) return defaultValue;
@@ -22,6 +24,9 @@ function parsePositiveInt(value: string | null, defaultValue: number) {
 
 export async function handleListTransactions(request: Request) {
     try {
+        const session = await getServerSession(authOptions);
+        const userRole = session?.user?.role;
+        const userId = userRole === "ADMIN" ? undefined : session?.user?.id;
         const { searchParams } = new URL(request.url);
 
         const result = await listTransactions({
@@ -42,6 +47,7 @@ export async function handleListTransactions(request: Request) {
                 | null) ?? undefined,
             page: parsePositiveInt(searchParams.get("page"), 1),
             pageSize: parsePositiveInt(searchParams.get("pageSize"), 10),
+            userId: userId,
         });
 
         return NextResponse.json(result, { status: 200 });
@@ -53,8 +59,13 @@ export async function handleListTransactions(request: Request) {
 
 export async function handleGetDashboardTransactionMetrics() {
     try {
-        const data = await getDashboardTransactionMetrics();
-        return NextResponse.json({ data }, { status: 200 });
+      const session = await getServerSession(authOptions);
+      const userRole = session?.user?.role;
+      const userId = userRole === "ADMIN" ? undefined : session?.user?.id;
+
+
+      const data = await getDashboardTransactionMetrics(userId);
+      return NextResponse.json({ data }, { status: 200 });
     } catch (error) {
         const message = error instanceof Error ? error.message : "Gagal mengambil ringkasan dashboard.";
         return NextResponse.json({ message }, { status: 500 });
