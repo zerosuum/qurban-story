@@ -4,6 +4,21 @@ import { snap } from "@/lib/midtrans";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+function getReadableErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (typeof error === "object" && error !== null) {
+    const potential = error as { ApiResponse?: { status_message?: string } };
+    if (potential.ApiResponse?.status_message) {
+      return potential.ApiResponse.status_message;
+    }
+  }
+
+  return "Terjadi kesalahan pada proses checkout.";
+}
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -68,6 +83,15 @@ export async function POST(request: Request) {
       }
     }
 
+    const grossAmount = Math.max(1, Math.round(finalPrice));
+
+    if (!process.env.MIDTRANS_SERVER_KEY || !process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY) {
+      return NextResponse.json(
+        { message: "Konfigurasi Midtrans belum lengkap di server." },
+        { status: 500 },
+      );
+    }
+
     const order = await prisma.$transaction(async (tx) => {
       const maxParticipants = product.species.maxParticipants;
       const isSharedQurban = maxParticipants > 1;
@@ -118,7 +142,7 @@ export async function POST(request: Request) {
           animalGroupId: targetGroupId,
           donorName,
           donorPhone,
-          totalPrice: finalPrice,
+          totalPrice: grossAmount,
           status: "PAYMENT_PENDING",
         },
       });
@@ -167,17 +191,17 @@ export async function POST(request: Request) {
     const parameter = {
       transaction_details: {
         order_id: midtransOrderId,
-        gross_amount: finalPrice,
+        gross_amount: grossAmount,
       },
       customer_details: {
         first_name: donorName,
-        email: session.user.email,
+        email: session.user.email ?? undefined,
         phone: donorPhone,
       },
       item_details: [
         {
           id: product.id,
-          price: finalPrice,
+          price: grossAmount,
           quantity: 1,
           name: product.name.substring(0, 50),
         },
@@ -186,19 +210,15 @@ export async function POST(request: Request) {
 
     const snapResponse = await snap.createTransaction(parameter);
 
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { snapToken: snapResponse.token },
-    });
-
     return NextResponse.json({
       token: snapResponse.token,
       orderId: order.id,
     });
   } catch (error) {
+    const message = getReadableErrorMessage(error);
     console.error("Checkout Error:", error);
     return NextResponse.json(
-      { message: "Internal Server Error" },
+      { message },
       { status: 500 },
     );
   }
