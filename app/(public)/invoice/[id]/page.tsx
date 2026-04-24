@@ -49,6 +49,7 @@ export default function InvoicePage() {
   const [detail, setDetail] = useState<TransactionDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState<string>("00:00:00");
+  const [isPaying, setIsPaying] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -102,9 +103,55 @@ export default function InvoicePage() {
     return () => clearInterval(interval);
   }, [detail, statusBayar]);
 
-  const handlePayNow = () => {
-    if (window.snap && detail?.snapToken) {
-      window.snap.pay(detail.snapToken, {
+  const handlePayNow = async () => {
+    if (!window.snap || !detail) {
+      alert("Sistem pembayaran sedang memuat. Silakan coba beberapa detik lagi.");
+      return;
+    }
+
+    setIsPaying(true);
+
+    try {
+      let snapToken = detail.snapToken;
+      const shouldRefreshToken =
+        !snapToken || statusBayar === "GAGAL" || statusBayar === "KADALUARSA";
+
+      if (shouldRefreshToken) {
+        const response = await fetch(`/api/transactions/${detail.id}/payment-token`, {
+          method: "POST",
+        });
+
+        const result = (await response.json().catch(() => null)) as
+          | { data?: { token?: string }; message?: string }
+          | null;
+
+        if (!response.ok) {
+          throw new Error(result?.message || "Gagal menyiapkan ulang pembayaran.");
+        }
+
+        const freshToken = result?.data?.token;
+
+        if (!freshToken) {
+          throw new Error("Token pembayaran tidak ditemukan. Silakan coba lagi.");
+        }
+
+        snapToken = freshToken;
+        setDetail((prev) =>
+          prev
+            ? {
+              ...prev,
+              snapToken: freshToken,
+              pembayaran: "TERTUNDA",
+            }
+            : prev,
+        );
+      }
+
+      if (!snapToken) {
+        throw new Error("Token pembayaran tidak ditemukan. Silakan coba lagi.");
+      }
+
+      window.snap.pay(snapToken, {
         onSuccess: function () {
           window.location.reload();
         },
@@ -115,8 +162,11 @@ export default function InvoicePage() {
           window.location.reload();
         },
       });
-    } else {
-      alert("Sistem sedang memuat atau token tidak ditemukan.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Gagal memproses pembayaran.";
+      alert(message);
+    } finally {
+      setIsPaying(false);
     }
   };
 
@@ -214,7 +264,7 @@ export default function InvoicePage() {
     badgeColor = "bg-[#E67E22]";
     title = "Pembayaran Kadaluarsa";
     description =
-      "Waktu pembayaran telah habis. Silakan buat pesanan baru untuk melanjutkan.";
+      "Waktu pembayaran telah habis. Klik Lanjutkan Pembayaran untuk mendapatkan token baru.";
     iconSvg = (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -352,22 +402,27 @@ export default function InvoicePage() {
             onClick={() => {
               if (statusBayar === "BERHASIL") {
                 router.push(`/riwayat-trx/${detail.id}`);
-              } else if (statusBayar === "MENUNGGU PEMBAYARAN") {
+              } else if (
+                statusBayar === "MENUNGGU PEMBAYARAN" ||
+                statusBayar === "GAGAL" ||
+                statusBayar === "KADALUARSA"
+              ) {
                 handlePayNow();
-              } else if (statusBayar === "GAGAL") {
-                router.push(`/checkout/${detail.id}`);
               } else {
                 router.push("/produk");
               }
             }}
+            disabled={isPaying}
             className="flex h-10 px-4 py-2 justify-center items-center gap-[10px] flex-1 rounded-xl bg-[#044B57] text-white text-center font-sans text-[16px] font-bold leading-[24px] hover:bg-primary-600 hover:shadow-md hover:shadow-neutral-200 active:scale-95 transition-all duration-200"
           >
             {statusBayar === "BERHASIL"
               ? "Lihat Detail Transaksi"
               : statusBayar === "MENUNGGU PEMBAYARAN"
                 ? "Bayar Sekarang"
-                : statusBayar === "GAGAL"
-                  ? "Coba Lagi"
+                : statusBayar === "GAGAL" || statusBayar === "KADALUARSA"
+                  ? isPaying
+                    ? "Menyiapkan Pembayaran..."
+                    : "Lanjutkan Pembayaran"
                   : "Buat Transaksi Baru"}
           </button>
         </div>

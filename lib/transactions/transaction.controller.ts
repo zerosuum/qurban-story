@@ -7,6 +7,7 @@ import {
     getTransactionById,
     listDocumentationDistributionYears,
     listTransactions,
+    regenerateTransactionPaymentToken,
     updateTransactionDocumentations,
     uploadSlaughterDocumentationByFolders,
 } from "@/lib/transactions/transaction.service";
@@ -26,7 +27,8 @@ export async function handleListTransactions(request: Request) {
     try {
         const session = await getServerSession(authOptions);
         const userRole = session?.user?.role;
-        const userId = userRole === "ADMIN" ? undefined : session?.user?.id;
+        const isPrivilegedAdmin = userRole === "ADMIN" || userRole === "SUPERADMIN";
+        const userId = isPrivilegedAdmin ? undefined : session?.user?.id;
         const { searchParams } = new URL(request.url);
 
         const result = await listTransactions({
@@ -59,13 +61,14 @@ export async function handleListTransactions(request: Request) {
 
 export async function handleGetDashboardTransactionMetrics() {
     try {
-      const session = await getServerSession(authOptions);
-      const userRole = session?.user?.role;
-      const userId = userRole === "ADMIN" ? undefined : session?.user?.id;
+        const session = await getServerSession(authOptions);
+        const userRole = session?.user?.role;
+        const isPrivilegedAdmin = userRole === "ADMIN" || userRole === "SUPERADMIN";
+        const userId = isPrivilegedAdmin ? undefined : session?.user?.id;
 
 
-      const data = await getDashboardTransactionMetrics(userId);
-      return NextResponse.json({ data }, { status: 200 });
+        const data = await getDashboardTransactionMetrics(userId);
+        return NextResponse.json({ data }, { status: 200 });
     } catch (error) {
         const message = error instanceof Error ? error.message : "Gagal mengambil ringkasan dashboard.";
         return NextResponse.json({ message }, { status: 500 });
@@ -83,6 +86,36 @@ export async function handleGetTransactionById(id: string) {
         return NextResponse.json({ data }, { status: 200 });
     } catch (error) {
         const message = error instanceof Error ? error.message : "Gagal mengambil detail transaksi.";
+        return NextResponse.json({ message }, { status: 500 });
+    }
+}
+
+export async function handleRegenerateTransactionPaymentToken(id: string) {
+    try {
+        const session = await getServerSession(authOptions);
+
+        if (!session?.user?.id) {
+            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        }
+
+        const userRole = session.user.role;
+        const isPrivilegedAdmin = userRole === "ADMIN" || userRole === "SUPERADMIN";
+        const userId = isPrivilegedAdmin ? undefined : session.user.id;
+
+        const data = await regenerateTransactionPaymentToken(id, userId);
+
+        return NextResponse.json({ data }, { status: 200 });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Gagal menyiapkan ulang pembayaran.";
+
+        if (message.includes("tidak ditemukan")) {
+            return NextResponse.json({ message }, { status: 404 });
+        }
+
+        if (message.includes("sudah lunas") || message.includes("tidak bisa")) {
+            return NextResponse.json({ message }, { status: 400 });
+        }
+
         return NextResponse.json({ message }, { status: 500 });
     }
 }
