@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { snap } from "@/lib/midtrans";
 import { getServerSession } from "next-auth";
@@ -95,6 +94,7 @@ export async function POST(request: Request) {
         { status: 500 },
       );
     }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const order = await prisma.$transaction(async (tx: any) => {
       const maxParticipants = product.species.maxParticipants;
@@ -222,13 +222,13 @@ export async function POST(request: Request) {
           snapToken: snapResponse.token,
         },
       });
-    } catch (error) {
-      const isMissingSnapTokenColumn =
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2022";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      const isMissingSnapTokenColumn = error?.code === "P2022";
       const isSnapTokenValidationError =
-        error instanceof Prisma.PrismaClientValidationError &&
-        error.message.toLowerCase().includes("snaptoken");
+        (error?.name === "PrismaClientValidationError" ||
+          error?.message?.includes("PrismaClientValidationError")) &&
+        error?.message?.toLowerCase().includes("snaptoken");
 
       if (!isMissingSnapTokenColumn && !isSnapTokenValidationError) {
         throw error;
@@ -242,9 +242,6 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = getReadableErrorMessage(error);
     console.error("Checkout Error:", error);
-    return NextResponse.json(
-      { message },
-      { status: 500 },
-    );
+    return NextResponse.json({ message }, { status: 500 });
   }
 }
