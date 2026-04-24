@@ -46,11 +46,15 @@ export default async function Home() {
       id: product.id,
       name: product.name,
       image:
-        product.images.find((img) => img.isPrimary)?.imageUrl ||
+        product.images.find(
+          (img: { isPrimary: boolean; imageUrl: string }) => img.isPrimary,
+        )?.imageUrl ||
         product.images[0]?.imageUrl ||
         "/hewan/sapi.png",
       price: formatRupiah(product.promoPrice || product.price),
-      weight: product.weight ? `Berat: ${product.weight}` : "Berat: Tidak spesifik",
+      weight: product.weight
+        ? `Berat: ${product.weight}`
+        : "Berat: Tidak spesifik",
     }));
   } catch (error) {
     console.error("[HOME_PRODUCTS_FETCH_ERROR]", error);
