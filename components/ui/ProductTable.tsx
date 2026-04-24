@@ -370,8 +370,23 @@ export default function ProductTable({ searchQuery, refreshKey = 0 }: ProductTab
                 method: "DELETE",
             });
 
+            const payload = (await response.json().catch(() => null)) as
+                | { message?: string }
+                | null;
+
             if (!response.ok) {
-                throw new Error("Gagal menghapus produk.");
+                const message =
+                    typeof payload?.message === "string" && payload.message.trim() !== ""
+                        ? payload.message
+                        : "Produk tidak dapat dihapus.";
+
+                setActionAlert({
+                    type: "error",
+                    title: "Terjadi Kesalahan.",
+                    message,
+                });
+                setIsDeleting(false);
+                return;
             }
 
             setLocalRefreshKey((prev) => prev + 1);
