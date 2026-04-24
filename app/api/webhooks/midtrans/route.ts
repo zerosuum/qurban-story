@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-import { Prisma } from "@prisma/client";
 
 const statusMap: Record<
   string,
