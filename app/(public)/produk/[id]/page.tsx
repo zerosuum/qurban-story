@@ -31,6 +31,8 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<ProductDetailResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   useEffect(() => {
     if (!id) return;
 
@@ -74,10 +76,14 @@ export default function ProductDetailPage() {
   }
 
   const isPatungan = product.name.toLowerCase().includes("patungan");
-  const mainImage =
+
+  const primaryImage =
     product.images.find((img) => img.isPrimary)?.imageUrl ||
     product.images[0]?.imageUrl ||
     "/hewan/sapi.png";
+
+  const displayImage = selectedImage || primaryImage;
+
   const allImages =
     product.images.length > 0
       ? product.images.map((img) => img.imageUrl)
@@ -124,19 +130,25 @@ export default function ProductDetailPage() {
         <div className="flex flex-col md:flex-row items-start gap-8 w-full">
           {/* Kiri: Gallery Foto */}
           <div className="flex flex-col gap-4 shrink-0 w-full md:w-auto">
-            <div className="relative w-full md:w-[384px] h-[384px] rounded-xl bg-[#F3F3F3] overflow-hidden">
+            <div className="relative w-full md:w-[384px] h-[384px] rounded-xl bg-[#F3F3F3] overflow-hidden transition-all duration-300">
               <Image
-                src={mainImage}
+                src={displayImage}
                 alt={product.name}
                 fill
                 className="object-cover"
               />
             </div>
+
             <div className="flex gap-4 overflow-x-auto pb-2">
               {allImages.map((img, idx) => (
                 <div
                   key={idx}
-                  className="relative w-[90px] h-[96px] shrink-0 rounded-xl bg-[#F3F3F3] overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => setSelectedImage(img)}
+                  className={`relative w-[90px] h-[96px] shrink-0 rounded-xl bg-[#F3F3F3] overflow-hidden cursor-pointer hover:opacity-80 transition-all ${
+                    displayImage === img
+                      ? "border-[3px] border-[#044B57]"
+                      : "border border-transparent"
+                  }`} 
                 >
                   <Image
                     src={img}

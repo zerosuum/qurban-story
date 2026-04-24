@@ -56,19 +56,19 @@ export default function ProdukPage() {
   }, []);
 
   return (
-    <div className="w-full bg-white flex flex-col items-center pb-24 min-h-[calc(100vh-80px)]">
+    <div className="w-full bg-white flex flex-col items-center pb-16 md:pb-24 min-h-[calc(100vh-80px)]">
       {/* Header Section */}
-      <div className="flex flex-col items-center gap-6 py-[60px] px-6 w-full text-center">
-        <h1 className="font-sans text-[36px] font-semibold leading-[46px] text-[#022D34]">
+      <div className="flex flex-col items-center gap-4 md:gap-6 py-10 md:py-[60px] px-4 md:px-6 w-full text-center">
+        <h1 className="font-sans text-[28px] md:text-[36px] font-semibold leading-[38px] md:leading-[46px] text-[#022D34]">
           Pilihan Hewan Qurban
         </h1>
-        <p className="font-sans text-[20px] font-medium leading-[26px] text-[#022D34]">
+        <p className="font-sans text-[16px] md:text-[20px] font-medium leading-[24px] md:leading-[26px] text-[#022D34]">
           Berbagai pilihan hewan berkualitas sesuai kebutuhan Anda.
         </p>
       </div>
 
       {/* Grid Produk */}
-      <div className="w-full max-w-[1200px] px-6">
+      <div className="w-full max-w-[1200px] px-4 md:px-6">
         {isLoading ? (
           <div className="w-full flex justify-center py-12">
             <span className="text-neutral-500 font-medium">
@@ -82,7 +82,7 @@ export default function ProdukPage() {
             </span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 justify-items-center">
             {products.map((product) => {
               const primaryImage =
                 product.images.find((img) => img.isPrimary)?.imageUrl ||
@@ -110,7 +110,7 @@ export default function ProdukPage() {
                       ? `${product.weight}`
                       : "Berat tidak spesifik"
                   }
-                  quota={isPatungan ? { current: 0, max: 7 } : undefined} // Mock quota sementara krn Zayyan blm pass AnimalGroup di API product
+                  quota={isPatungan ? { current: 0, max: 7 } : undefined}
                 />
               );
             })}
