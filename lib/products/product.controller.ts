@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+import { Prisma } from "@prisma/client";
 import {
   createProduct,
   deleteProduct,
@@ -353,14 +354,43 @@ export async function handleUpdateProduct(id: string, request: Request) {
 
 export async function handleDeleteProduct(id: string) {
   try {
-    const deleted = await deleteProduct(id);
+    const result = await deleteProduct(id);
 
-    if (!deleted) {
+    if (result.status === "not_found") {
       return NextResponse.json({ message: "Produk tidak ditemukan." }, { status: 404 });
+    }
+
+    if (result.status === "has_transactions") {
+      return NextResponse.json(
+        {
+          message: "Produk tidak dapat dihapus karena memiliki transaksi terkait.",
+        },
+        { status: 409 }
+      );
     }
 
     return NextResponse.json({ message: "Produk berhasil dihapus." }, { status: 200 });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2003") {
+        return NextResponse.json(
+          {
+            message: "Produk tidak dapat dihapus karena memiliki transaksi terkait.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (error.code === "P2025") {
+        return NextResponse.json({ message: "Produk tidak ditemukan." }, { status: 404 });
+      }
+    }
+
+    console.error("[DELETE_PRODUCT_ERROR]", {
+      id,
+      error,
+    });
+
     const message = error instanceof Error ? error.message : "Gagal menghapus produk.";
     return NextResponse.json({ message }, { status: 500 });
   }

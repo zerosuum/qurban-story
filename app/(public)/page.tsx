@@ -1,10 +1,61 @@
 import Button from "@/components/ui/Button";
 import KeunggulanCard from "@/components/ui/KeunggulanCard";
-import Link from "next/dist/client/link";
+import Link from "next/link";
 import AlurCard from "@/components/ui/AlurCard";
 import PilihanHewanCard from "@/components/ui/PilihanHewanCard";
+import { listProducts } from "@/lib/products/product.service";
 
-export default function Home() {
+function formatRupiah(value: string | number) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(Number(value));
+}
+
+export default async function Home() {
+  let pilihanHewan: Array<{
+    id: string;
+    name: string;
+    image: string;
+    price: string;
+    weight: string;
+  }> = [];
+
+  try {
+    const firstPage = await listProducts({
+      page: 1,
+      pageSize: 100,
+      isActive: true,
+    });
+
+    const allProducts = [...firstPage.data];
+
+    if (firstPage.pagination.totalPages > 1) {
+      for (let page = 2; page <= firstPage.pagination.totalPages; page += 1) {
+        const nextPage = await listProducts({
+          page,
+          pageSize: 100,
+          isActive: true,
+        });
+        allProducts.push(...nextPage.data);
+      }
+    }
+
+    pilihanHewan = allProducts.map((product) => ({
+      id: product.id,
+      name: product.name,
+      image:
+        product.images.find((img) => img.isPrimary)?.imageUrl ||
+        product.images[0]?.imageUrl ||
+        "/hewan/sapi.png",
+      price: formatRupiah(product.promoPrice || product.price),
+      weight: product.weight ? `Berat: ${product.weight}` : "Berat: Tidak spesifik",
+    }));
+  } catch (error) {
+    console.error("[HOME_PRODUCTS_FETCH_ERROR]", error);
+  }
+
   return (
     <main>
       <div className="min-h-[calc(100vh-80px)] flex items-end justify-start px-10 py-20 bg-cover bg-center" style={{ backgroundImage: "url('landing-page.png')" }}>
@@ -60,17 +111,27 @@ Tanpa proses yang rumit."
           <AlurCard number="03" title="Dapatkan Laporan" description="Dapatkan laporan lengkap berupa foto, video, dan catatan distribusi qurban Anda." />
         </div>
       </div>
-      <div className="min-h-198 bg-primary flex flex-col justify-center items-center gap-8">
+      <div className="min-h-198 bg-primary flex flex-col justify-center items-center gap-8 px-6 py-16">
         <div className="text-white flex flex-col items-center gap-6">
           <h2 className="text-4xl font-semibold">Pilihan Hewan Qurban</h2>
           <h4 className="text-xl font-medium">Berbagai pilihan hewan berkualitas sesuai kebutuhan Anda.</h4>
         </div>
-        <div className="flex flex-row gap-6">
-          <PilihanHewanCard image="/hewan/domba.png" name="Domba" price="Rp 3.500.000" weight="Berat: 30-40 kg" />
-          <PilihanHewanCard image="/hewan/kambing.png" name="Kambing" price="Rp 3.200.000" weight="Berat: 25-35 kg" />
-          <PilihanHewanCard image="/hewan/sapi.png" name="Sapi 1 Ekor" price="Rp 28.000.000" weight="Berat: 300 kg" />
-          <PilihanHewanCard image="/hewan/sapi.png" name="Sapi 1/7 Patungan" price="Rp 4.200.000" weight="Berat: 300 kg / 7" />
-        </div>
+        {pilihanHewan.length === 0 ? (
+          <p className="text-white/90 text-lg font-medium">Produk belum tersedia saat ini.</p>
+        ) : (
+          <div className="grid w-full max-w-6xl grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {pilihanHewan.map((item) => (
+              <PilihanHewanCard
+                key={item.id}
+                image={item.image}
+                name={item.name}
+                price={item.price}
+                weight={item.weight}
+                href={`/produk/${item.id}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
       <div className="min-h-100 bg-secondary flex flex-col justify-center items-center text-center gap-8 px-30 py-45">
         <h2 className="text-4xl font-semibold">Siap Menunaikan Qurban dengan Lebih Tenang?</h2>

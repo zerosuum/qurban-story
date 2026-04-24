@@ -12,14 +12,16 @@ type PilihanHewanCardProps = {
 
 export default function PilihanHewanCard({ image, name, price, weight, href }: PilihanHewanCardProps) {
     return (
-        <div className="bg-white rounded-lg shadow-md p-6 flex flex-col items-center text-center w-70 h-108">
-            <Image src={image} alt={name} width={232} height={232} className="object-cover rounded-lg" />
-            <div className="mt-2 flex flex-col items-center gap-2">
+        <div className="w-full max-w-70 rounded-lg bg-white p-6 shadow-md">
+            <div className="relative mx-auto aspect-square w-full max-w-58 overflow-hidden rounded-lg bg-neutral-100">
+                <Image src={image} alt={name} fill className="object-cover" />
+            </div>
+            <div className="mt-3 flex flex-col items-center gap-2 text-center">
                 <h3 className=" text-[16px] font-semibold text-neutral-900">{name}</h3>
                 <p className="text-primary-600 text-lg font-bold">{price}</p>
                 <p className="text-primary-900 text-[16px]">{weight}</p>
             </div>
-            <Link href={href || "#"} className="mt-4 w-58">
+            <Link href={href || "#"} className="mt-4 block w-full">
                 <Button variant="primary" className="w-full">
                     Lihat Detail
                 </Button>

@@ -387,9 +387,15 @@ export async function deleteProduct(id: string) {
   const existing = await prisma.product.findUnique({ where: { id }, select: { id: true } });
 
   if (!existing) {
-    return false;
+    return { status: "not_found" as const };
+  }
+
+  const transactionCount = await prisma.order.count({ where: { productId: id } });
+
+  if (transactionCount > 0) {
+    return { status: "has_transactions" as const };
   }
 
   await prisma.product.delete({ where: { id } });
-  return true;
+  return { status: "deleted" as const };
 }
