@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { snap } from "@/lib/midtrans";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { Prisma } from "@prisma/client";
 
 function getReadableErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
@@ -87,31 +85,48 @@ export async function POST(request: Request) {
 
     const grossAmount = Math.max(1, Math.round(finalPrice));
 
-    if (!process.env.MIDTRANS_SERVER_KEY || !process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY) {
+    if (
+      !process.env.MIDTRANS_SERVER_KEY ||
+      !process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY
+    ) {
       return NextResponse.json(
         { message: "Konfigurasi Midtrans belum lengkap di server." },
         { status: 500 },
       );
     }
 
-    const order = await prisma.$transaction(
-      async (tx: Prisma.TransactionClient) => {
-        const maxParticipants = product.species.maxParticipants;
-        const isSharedQurban = maxParticipants > 1;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const order = await prisma.$transaction(async (tx: any) => {
+      const maxParticipants = product.species.maxParticipants;
+      const isSharedQurban = maxParticipants > 1;
 
-        let targetGroupId: string | null = null;
+      let targetGroupId: string | null = null;
 
-        if (isSharedQurban) {
-          let openGroup = await tx.animalGroup.findFirst({
-            where: {
-              productId: product.id,
-              status: "OPEN",
-              currentSlot: {
-                lt: maxParticipants,
-              },
+      if (isSharedQurban) {
+        let openGroup = await tx.animalGroup.findFirst({
+          where: {
+            productId: product.id,
+            status: "OPEN",
+            currentSlot: {
+              lt: maxParticipants,
             },
-            orderBy: {
-              createdAt: "asc",
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+          select: {
+            id: true,
+            currentSlot: true,
+            maxSlot: true,
+          },
+        });
+
+        if (!openGroup) {
+          openGroup = await tx.animalGroup.create({
+            data: {
+              productId: product.id,
+              maxSlot: maxParticipants,
+              status: "OPEN",
             },
             select: {
               id: true,
@@ -119,77 +134,62 @@ export async function POST(request: Request) {
               maxSlot: true,
             },
           });
-
-          if (!openGroup) {
-            openGroup = await tx.animalGroup.create({
-              data: {
-                productId: product.id,
-                maxSlot: maxParticipants,
-                status: "OPEN",
-              },
-              select: {
-                id: true,
-                currentSlot: true,
-                maxSlot: true,
-              },
-            });
-          }
-
-          targetGroupId = openGroup.id;
         }
 
-        const newOrder = await tx.order.create({
-          data: {
-            userId: session.user.id,
-            productId: product.id,
-            animalGroupId: targetGroupId,
-            donorName,
-            donorPhone,
-            totalPrice: grossAmount,
-            status: "PAYMENT_PENDING",
+        targetGroupId = openGroup.id;
+      }
+
+      const newOrder = await tx.order.create({
+        data: {
+          userId: session.user.id,
+          productId: product.id,
+          animalGroupId: targetGroupId,
+          donorName,
+          donorPhone,
+          totalPrice: grossAmount,
+          status: "PAYMENT_PENDING",
+        },
+      });
+
+      if (targetGroupId) {
+        const groupState = await tx.animalGroup.findUnique({
+          where: { id: targetGroupId },
+          select: {
+            currentSlot: true,
+            maxSlot: true,
           },
         });
 
-        if (targetGroupId) {
-          const groupState = await tx.animalGroup.findUnique({
-            where: { id: targetGroupId },
-            select: {
-              currentSlot: true,
-              maxSlot: true,
-            },
-          });
+        const nextSlot = (groupState?.currentSlot ?? 0) + 1;
+        const nextStatus =
+          nextSlot >= (groupState?.maxSlot ?? maxParticipants)
+            ? "FULL"
+            : "OPEN";
 
-          const nextSlot = (groupState?.currentSlot ?? 0) + 1;
-          const nextStatus =
-            nextSlot >= (groupState?.maxSlot ?? maxParticipants)
-              ? "FULL"
-              : "OPEN";
+        await tx.animalGroup.update({
+          where: { id: targetGroupId },
+          data: {
+            currentSlot: nextSlot,
+            status: nextStatus,
+          },
+        });
+      }
 
-          await tx.animalGroup.update({
-            where: { id: targetGroupId },
-            data: {
-              currentSlot: nextSlot,
-              status: nextStatus,
-            },
-          });
-        }
+      if (
+        participants &&
+        Array.isArray(participants) &&
+        participants.length > 0
+      ) {
+        await tx.orderParticipant.createMany({
+          data: participants.map((name: string) => ({
+            orderId: newOrder.id,
+            participantName: name,
+          })),
+        });
+      }
 
-        if (
-          participants &&
-          Array.isArray(participants) &&
-          participants.length > 0
-        ) {
-          await tx.orderParticipant.createMany({
-            data: participants.map((name: string) => ({
-              orderId: newOrder.id,
-              participantName: name,
-            })),
-          });
-        }
-
-        return newOrder;
-      },
-    );
+      return newOrder;
+    });
 
     const midtransOrderId = order.id;
 
@@ -222,13 +222,13 @@ export async function POST(request: Request) {
           snapToken: snapResponse.token,
         },
       });
-    } catch (error) {
-      const isMissingSnapTokenColumn =
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2022";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      const isMissingSnapTokenColumn = error?.code === "P2022";
       const isSnapTokenValidationError =
-        error instanceof Prisma.PrismaClientValidationError &&
-        error.message.toLowerCase().includes("snaptoken");
+        (error?.name === "PrismaClientValidationError" ||
+          error?.message?.includes("PrismaClientValidationError")) &&
+        error?.message?.toLowerCase().includes("snaptoken");
 
       if (!isMissingSnapTokenColumn && !isSnapTokenValidationError) {
         throw error;
@@ -242,9 +242,6 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = getReadableErrorMessage(error);
     console.error("Checkout Error:", error);
-    return NextResponse.json(
-      { message },
-      { status: 500 },
-    );
+    return NextResponse.json({ message }, { status: 500 });
   }
 }
