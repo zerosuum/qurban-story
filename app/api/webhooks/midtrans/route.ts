@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { Prisma } from "@prisma/client";
 
 const statusMap: Record<
   string,
@@ -88,7 +89,8 @@ export async function POST(request: Request) {
     const dbStatus = statusMap[transaction_status] || "PAYMENT_PENDING";
 
     // 4. Update Database secara Atomic
-    await prisma.$transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await prisma.$transaction(async (tx: any) => {
       // Upsert tabel Payment
       await tx.payment.upsert({
         where: { orderId: realOrderId },
