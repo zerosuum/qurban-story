@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { snap } from "@/lib/midtrans";
 import { getServerSession } from "next-auth";
@@ -210,12 +211,25 @@ export async function POST(request: Request) {
 
     const snapResponse = await snap.createTransaction(parameter);
 
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        snapToken: snapResponse.token,
-      },
-    });
+    try {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          snapToken: snapResponse.token,
+        },
+      });
+    } catch (error) {
+      const isMissingSnapTokenColumn =
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2022";
+      const isSnapTokenValidationError =
+        error instanceof Prisma.PrismaClientValidationError &&
+        error.message.toLowerCase().includes("snaptoken");
+
+      if (!isMissingSnapTokenColumn && !isSnapTokenValidationError) {
+        throw error;
+      }
+    }
 
     return NextResponse.json({
       token: snapResponse.token,

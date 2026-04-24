@@ -774,7 +774,6 @@ export async function getTransactionById(
       totalPrice: true,
       status: true,
       createdAt: true,
-      snapToken: true,
       product: {
         select: {
           name: true,
@@ -783,11 +782,6 @@ export async function getTransactionById(
       invoice: {
         select: {
           invoiceNumber: true,
-        },
-      },
-      payment: {
-        select: {
-          paymentType: true,
         },
       },
       reports: {
@@ -846,11 +840,6 @@ export async function getTransactionById(
   const videoUrl =
     combinedDocs.find((doc) => doc.mediaType === "VIDEO")?.mediaUrl ?? null;
 
-  const snapTokenValue =
-    "snapToken" in order && typeof order.snapToken === "string"
-      ? order.snapToken
-      : null;
-
   return {
     id: order.id,
     invoice:
@@ -861,8 +850,8 @@ export async function getTransactionById(
     tanggal: formatDate(order.createdAt),
     createdAt: order.createdAt.toISOString(),
     nominal: order.totalPrice.toString(),
-    snapToken: snapTokenValue,
-    paymentMethod: order.payment?.paymentType ?? null,
+    snapToken: null,
+    paymentMethod: null,
     pembayaran: mapOrderStatusToUi(order.status),
     pelaporan: mapReportsToUiStatus(
       getEffectiveReports(order.reports, order.group?.reports),
@@ -911,10 +900,13 @@ export async function regenerateTransactionPaymentToken(
   }
 
   const grossAmount = Math.max(1, Math.round(Number(order.totalPrice)));
+  const retrySuffix = `r${Date.now().toString(36)}`;
+  const maxBaseLength = Math.max(1, 50 - retrySuffix.length - 1);
+  const midtransOrderId = `${order.id.slice(0, maxBaseLength)}-${retrySuffix}`;
 
   const parameter = {
     transaction_details: {
-      order_id: order.id,
+      order_id: midtransOrderId,
       gross_amount: grossAmount,
     },
     customer_details: {
@@ -935,13 +927,37 @@ export async function regenerateTransactionPaymentToken(
   try {
     const snapResponse = await snap.createTransaction(parameter);
 
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        status: "PAYMENT_PENDING",
-        snapToken: snapResponse.token,
-      },
-    });
+    try {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: "PAYMENT_PENDING",
+          snapToken: snapResponse.token,
+        },
+      });
+    } catch (error) {
+      // Fallback for environments where snapToken is unavailable in DB/client.
+      const isMissingSnapTokenColumn =
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2022";
+      const isSnapTokenValidationError =
+        error instanceof Prisma.PrismaClientValidationError &&
+        error.message.toLowerCase().includes("snaptoken");
+
+      if (
+        isMissingSnapTokenColumn ||
+        isSnapTokenValidationError
+      ) {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            status: "PAYMENT_PENDING",
+          },
+        });
+      } else {
+        throw error;
+      }
+    }
 
     return {
       orderId: order.id,
