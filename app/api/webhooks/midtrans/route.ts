@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
     const dbStatus = statusMap[transaction_status] || "PAYMENT_PENDING";
 
     // 4. Update Database secara Atomic
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Upsert tabel Payment
       await tx.payment.upsert({
         where: { orderId: realOrderId },
