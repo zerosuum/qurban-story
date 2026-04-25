@@ -189,29 +189,28 @@ async function PilihanHewanGrid() {
         console.error("[HOME_PRODUCTS_FETCH_ERROR]", error);
     }
 
-    if (pilihanHewan.length === 0) {
-        return (
-            <p className="text-white/90 text-lg font-medium">
-                Produk belum tersedia saat ini.
-            </p>
-        );
-    }
-
+if (pilihanHewan.length === 0) {
     return (
-        <div className="grid w-full max-w-6xl grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {pilihanHewan.map((item) => (
-                <PilihanHewanCard
-                    key={item.id}
-                    image={item.image}
-                    name={item.name}
-                    price={item.price}
-                    weight={item.weight}
-                    href={`/produk/${item.id}`}
-                />
-            ))}
-        </div>
+        <p className="text-white/90 text-lg font-medium">
+            Produk belum tersedia saat ini.
+        </p>
     );
 }
+
+return (
+    <div className="grid w-full max-w-6xl grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {pilihanHewan.map((item) => (
+            <PilihanHewanCard
+                key={item.id}
+                image={item.image}
+                name={item.name}
+                price={item.price}
+                weight={item.weight}
+                href={`/produk/${item.id}`}
+            />
+        ))}
+    </div>
+);
 
 function PilihanHewanSkeleton() {
     return (

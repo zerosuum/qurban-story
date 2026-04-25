@@ -7,9 +7,12 @@ import {
     getTransactionById,
     listDocumentationDistributionYears,
     listTransactions,
+    regenerateTransactionPaymentToken,
     updateTransactionDocumentations,
     uploadSlaughterDocumentationByFolders,
 } from "@/lib/transactions/transaction.service";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 function parsePositiveInt(value: string | null, defaultValue: number) {
     if (!value) return defaultValue;
@@ -22,6 +25,10 @@ function parsePositiveInt(value: string | null, defaultValue: number) {
 
 export async function handleListTransactions(request: Request) {
     try {
+        const session = await getServerSession(authOptions);
+        const userRole = session?.user?.role;
+        const isPrivilegedAdmin = userRole === "ADMIN" || userRole === "SUPERADMIN";
+        const userId = isPrivilegedAdmin ? undefined : session?.user?.id;
         const { searchParams } = new URL(request.url);
 
         const result = await listTransactions({
@@ -42,6 +49,7 @@ export async function handleListTransactions(request: Request) {
                 | null) ?? undefined,
             page: parsePositiveInt(searchParams.get("page"), 1),
             pageSize: parsePositiveInt(searchParams.get("pageSize"), 10),
+            userId: userId,
         });
 
         return NextResponse.json(result, { status: 200 });
@@ -53,7 +61,13 @@ export async function handleListTransactions(request: Request) {
 
 export async function handleGetDashboardTransactionMetrics() {
     try {
-        const data = await getDashboardTransactionMetrics();
+        const session = await getServerSession(authOptions);
+        const userRole = session?.user?.role;
+        const isPrivilegedAdmin = userRole === "ADMIN" || userRole === "SUPERADMIN";
+        const userId = isPrivilegedAdmin ? undefined : session?.user?.id;
+
+
+        const data = await getDashboardTransactionMetrics(userId);
         return NextResponse.json({ data }, { status: 200 });
     } catch (error) {
         const message = error instanceof Error ? error.message : "Gagal mengambil ringkasan dashboard.";
@@ -72,6 +86,36 @@ export async function handleGetTransactionById(id: string) {
         return NextResponse.json({ data }, { status: 200 });
     } catch (error) {
         const message = error instanceof Error ? error.message : "Gagal mengambil detail transaksi.";
+        return NextResponse.json({ message }, { status: 500 });
+    }
+}
+
+export async function handleRegenerateTransactionPaymentToken(id: string) {
+    try {
+        const session = await getServerSession(authOptions);
+
+        if (!session?.user?.id) {
+            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        }
+
+        const userRole = session.user.role;
+        const isPrivilegedAdmin = userRole === "ADMIN" || userRole === "SUPERADMIN";
+        const userId = isPrivilegedAdmin ? undefined : session.user.id;
+
+        const data = await regenerateTransactionPaymentToken(id, userId);
+
+        return NextResponse.json({ data }, { status: 200 });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Gagal menyiapkan ulang pembayaran.";
+
+        if (message.includes("tidak ditemukan")) {
+            return NextResponse.json({ message }, { status: 404 });
+        }
+
+        if (message.includes("sudah lunas") || message.includes("tidak bisa")) {
+            return NextResponse.json({ message }, { status: 400 });
+        }
+
         return NextResponse.json({ message }, { status: 500 });
     }
 }

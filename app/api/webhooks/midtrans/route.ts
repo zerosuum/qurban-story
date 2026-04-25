@@ -51,7 +51,13 @@ export async function POST(request: Request) {
     }
 
     // 2. Extract Order ID
-    const realOrderId = order_id;
+    // Retry payment may use suffix, e.g. <uuid>-retry-<timestamp>.
+    const realOrderId =
+      typeof order_id === "string"
+        ? (order_id.match(
+          /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}/,
+        )?.[0] ?? order_id)
+        : "";
 
     if (!realOrderId) {
       return NextResponse.json({ message: "Order ID kosong" }, { status: 400 });
@@ -82,7 +88,8 @@ export async function POST(request: Request) {
     const dbStatus = statusMap[transaction_status] || "PAYMENT_PENDING";
 
     // 4. Update Database secara Atomic
-    await prisma.$transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await prisma.$transaction(async (tx: any) => {
       // Upsert tabel Payment
       await tx.payment.upsert({
         where: { orderId: realOrderId },

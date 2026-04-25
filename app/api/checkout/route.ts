@@ -85,14 +85,18 @@ export async function POST(request: Request) {
 
     const grossAmount = Math.max(1, Math.round(finalPrice));
 
-    if (!process.env.MIDTRANS_SERVER_KEY || !process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY) {
+    if (
+      !process.env.MIDTRANS_SERVER_KEY ||
+      !process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY
+    ) {
       return NextResponse.json(
         { message: "Konfigurasi Midtrans belum lengkap di server." },
         { status: 500 },
       );
     }
 
-    const order = await prisma.$transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const order = await prisma.$transaction(async (tx: any) => {
       const maxParticipants = product.species.maxParticipants;
       const isSharedQurban = maxParticipants > 1;
 
@@ -157,9 +161,10 @@ export async function POST(request: Request) {
         });
 
         const nextSlot = (groupState?.currentSlot ?? 0) + 1;
-        const nextStatus = nextSlot >= (groupState?.maxSlot ?? maxParticipants)
-          ? "FULL"
-          : "OPEN";
+        const nextStatus =
+          nextSlot >= (groupState?.maxSlot ?? maxParticipants)
+            ? "FULL"
+            : "OPEN";
 
         await tx.animalGroup.update({
           where: { id: targetGroupId },
@@ -210,6 +215,26 @@ export async function POST(request: Request) {
 
     const snapResponse = await snap.createTransaction(parameter);
 
+    try {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          snapToken: snapResponse.token,
+        },
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      const isMissingSnapTokenColumn = error?.code === "P2022";
+      const isSnapTokenValidationError =
+        (error?.name === "PrismaClientValidationError" ||
+          error?.message?.includes("PrismaClientValidationError")) &&
+        error?.message?.toLowerCase().includes("snaptoken");
+
+      if (!isMissingSnapTokenColumn && !isSnapTokenValidationError) {
+        throw error;
+      }
+    }
+
     return NextResponse.json({
       token: snapResponse.token,
       orderId: order.id,
@@ -217,9 +242,6 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = getReadableErrorMessage(error);
     console.error("Checkout Error:", error);
-    return NextResponse.json(
-      { message },
-      { status: 500 },
-    );
+    return NextResponse.json({ message }, { status: 500 });
   }
 }
