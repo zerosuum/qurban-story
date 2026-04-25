@@ -9,11 +9,9 @@ import {
   CheckoutNiat,
   CheckoutMetode,
   CheckoutTotal,
-  CheckoutQuotaInput,
 } from "@/components/ui/CheckoutCards";
 import CancelModal from "@/components/ui/CancelModal";
 
-// Tipe data untuk fetching produk
 type ProductDetailResponse = {
   id: string;
   name: string;
@@ -37,18 +35,17 @@ export default function CheckoutPage() {
   const id = params?.id as string;
   const { data: session, status } = useSession();
 
-  // State untuk modal
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
-  // States baru buat integrasi
   const [product, setProduct] = useState<ProductDetailResponse | null>(null);
   const [isProductLoading, setIsProductLoading] = useState(true);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [donorName, setDonorName] = useState("");
   const [donorPhone, setDonorPhone] = useState("");
-  const [qurbanName, setQurbanName] = useState("");
 
-  // 1. Fetch data produk berdasarkan ID
+  // 🔥 FIX 1: State dirubah jadi Array biar bisa nampung 1 sampai 7 orang
+  const [qurbanNames, setQurbanNames] = useState<string[]>([""]);
+
   useEffect(() => {
     if (!id) return;
     const fetchDetail = async () => {
@@ -66,29 +63,59 @@ export default function CheckoutPage() {
     void fetchDetail();
   }, [id]);
 
-  // 2. Pre-fill nama dari session kalau user udah login
   useEffect(() => {
     if (session?.user?.name) {
       setDonorName(session.user.name);
     }
   }, [session]);
 
-  // Redirect paksa kalau belum login
   if (status === "unauthenticated") {
     router.push("/login");
     return null;
   }
 
-  // 3. Fungsi Utama Checkout ke Midtrans
+  // 🔥 Logika Penentuan Maksimal Input Nama
+  const productNameLower = product?.name.toLowerCase() || "";
+  const isPatungan = productNameLower.includes("patungan");
+  const isSapi = productNameLower.includes("sapi");
+  const maxNames = !isPatungan && isSapi ? 7 : 1;
+  const validNames = qurbanNames.filter((n) => n.trim() !== "");
+
+  let displayNames = donorName || "Hamba Allah";
+  if (validNames.length === 1) {
+    displayNames = validNames[0];
+  } else if (validNames.length === 2) {
+    displayNames = `${validNames[0]} dan ${validNames[1]}`;
+  } else if (validNames.length > 2) {
+    const last = validNames[validNames.length - 1];
+    const rest = validNames.slice(0, -1).join(", ");
+    displayNames = `${rest}, dan ${last}`;
+  }
+
+  const handleNameChange = (index: number, val: string) => {
+    const newNames = [...qurbanNames];
+    newNames[index] = val;
+    setQurbanNames(newNames);
+  };
+
+  const addNameInput = () => {
+    if (qurbanNames.length < maxNames) {
+      setQurbanNames([...qurbanNames, ""]);
+    }
+  };
+
+  const removeNameInput = (index: number) => {
+    const newNames = qurbanNames.filter((_, i) => i !== index);
+    setQurbanNames(newNames);
+  };
+
   const handleCheckout = async () => {
     if (!donorName || !donorPhone) {
       alert("Mohon lengkapi Nama Pequrban dan Nomor Telepon.");
       return;
     }
 
-    const isPatungan = product?.name.toLowerCase().includes("patungan");
-
-    const finalQurbanName = qurbanName.trim() !== "" ? qurbanName : donorName;
+    const finalParticipants = validNames.length > 0 ? validNames : [donorName];
 
     setIsCheckoutLoading(true);
     try {
@@ -99,7 +126,7 @@ export default function CheckoutPage() {
           productId: id,
           donorName: donorName,
           donorPhone: donorPhone,
-          participants: isPatungan ? [donorName] : [finalQurbanName],
+          participants: finalParticipants,
         }),
       });
 
@@ -109,23 +136,18 @@ export default function CheckoutPage() {
         throw new Error(data.message || "Gagal memproses checkout");
       }
 
-      // Panggil Snap Midtrans pakai token dari Backend
       window.snap.pay(data.token, {
-        onSuccess: function (result: unknown) {
-          console.log("Success:", result);
-          router.push(`/invoice/${data.orderId}`); // <-- ARAHIN KE INVOICE
+        onSuccess: function () {
+          router.push(`/invoice/${data.orderId}`);
         },
-        onPending: function (result: unknown) {
-          console.log("Pending:", result);
-          router.push(`/invoice/${data.orderId}`); // <-- ARAHIN KE INVOICE
+        onPending: function () {
+          router.push(`/invoice/${data.orderId}`);
         },
-        onError: function (result: unknown) {
-          console.log("Error:", result);
-          router.push(`/invoice/${data.orderId}`); // <-- ARAHIN KE INVOICE
+        onError: function () {
+          router.push(`/invoice/${data.orderId}`);
         },
         onClose: function () {
-          console.log("User nutup popup sebelum bayar");
-          router.push(`/invoice/${data.orderId}`); // <-- ARAHIN KE INVOICE
+          router.push(`/invoice/${data.orderId}`);
         },
       });
     } catch (error: unknown) {
@@ -139,7 +161,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // Tampilan Loading
   if (isProductLoading) {
     return (
       <div className="min-h-[calc(100vh-80px)] w-full flex justify-center items-center">
@@ -150,7 +171,6 @@ export default function CheckoutPage() {
     );
   }
 
-  // Tampilan Error / Tidak Ditemukan
   if (!product) {
     return (
       <div className="min-h-[calc(100vh-80px)] w-full flex justify-center items-center flex-col gap-4">
@@ -164,12 +184,10 @@ export default function CheckoutPage() {
     );
   }
 
-  // Siapin data buat UI
   const mainImage =
     product.images.find((img) => img.isPrimary)?.imageUrl ||
     product.images[0]?.imageUrl ||
     "/hewan/sapi.png";
-  const isPatungan = product.name.toLowerCase().includes("patungan");
   const finalPrice = product.promoPrice || product.price;
 
   return (
@@ -236,10 +254,10 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* 2. CARD: DATA PEQURBAN */}
+        {/* 2. CARD: DATA DONATUR */}
         <div className="flex flex-col items-start w-full p-4 px-6 gap-4 rounded-xl border border-neutral-200 bg-white shadow-sm">
           <h2 className="font-sans text-[18px] font-bold text-neutral-900 w-full">
-            Data Pequrban
+            Data Pequrban / Pembeli
           </h2>
 
           <div className="flex flex-col gap-1 w-full">
@@ -283,38 +301,83 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* 3. CARD: INPUT QUOTA NAMA PATUNGAN / UTUH */}
-        {!isPatungan ? (
-          <div className="flex flex-col items-start w-full p-4 px-6 gap-4 rounded-xl border border-neutral-200 bg-white shadow-sm">
-            <h2 className="font-sans text-[18px] font-bold text-neutral-900 w-full">
+        {/* 3. CARD: INPUT NAMA YANG BERQURBAN */}
+        <div className="flex flex-col items-start w-full p-4 px-6 gap-4 rounded-xl border border-neutral-200 bg-white shadow-sm">
+          <div className="flex justify-between items-center w-full">
+            <h2 className="font-sans text-[18px] font-bold text-neutral-900">
               Nama yang Berqurban
             </h2>
-            <div className="flex flex-col gap-1 w-full">
-              <label className="font-sans text-[14px] font-medium text-neutral-900">
-                Niat qurban atas nama
-              </label>
-              <input
-                type="text"
-                value={qurbanName}
-                onChange={(e) => setQurbanName(e.target.value)}
-                placeholder={donorName || "Masukkan nama yang berqurban"}
-                className="w-full h-10 px-3 rounded-lg border border-neutral-200 text-[14px] text-neutral-900 outline-none focus:border-primary-500"
-              />
-            </div>
+            {maxNames > 1 && (
+              <span className="text-[14px] font-medium text-[#044B57] bg-[#e6f3f5] px-3 py-1 rounded-full">
+                {qurbanNames.length} / {maxNames} Orang
+              </span>
+            )}
           </div>
-        ) : (
-          <CheckoutQuotaInput maxQuota={7} />
-        )}
+
+          <div className="flex flex-col gap-3 w-full">
+            {qurbanNames.map((name, index) => (
+              <div key={index} className="flex flex-col gap-1 w-full">
+                <label className="font-sans text-[14px] font-medium text-neutral-900">
+                  {maxNames > 1
+                    ? `Niat qurban atas nama (Orang ke-${index + 1})`
+                    : `Niat qurban atas nama`}
+                </label>
+                <div className="flex gap-2 w-full">
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => handleNameChange(index, e.target.value)}
+                    placeholder={donorName || "Masukkan nama yang berqurban"}
+                    className="w-full h-10 px-3 rounded-lg border border-neutral-200 text-[14px] text-neutral-900 outline-none focus:border-primary-500"
+                  />
+                  {maxNames > 1 && qurbanNames.length > 1 && (
+                    <button
+                      onClick={() => removeNameInput(index)}
+                      className="shrink-0 flex items-center justify-center w-10 h-10 rounded-lg border border-red-500 text-red-500 hover:bg-red-50 transition-colors"
+                      title="Hapus Nama"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M3 6h18" />
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                        <line x1="10" x2="10" y1="11" y2="17" />
+                        <line x1="14" x2="14" y1="11" y2="17" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {maxNames > 1 && qurbanNames.length < maxNames && (
+              <button
+                onClick={addNameInput}
+                className="w-max px-4 py-2 mt-2 rounded-lg border border-[#044B57] text-[#044B57] text-sm font-semibold hover:bg-neutral-50 transition-colors"
+              >
+                + Tambah Nama Pequrban
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* 4. CARD: CATATAN NIAT */}
-        <CheckoutNiat nama={isPatungan ? donorName : qurbanName} />
+        <CheckoutNiat nama={displayNames} />
 
         {/* 5. CARD: METODE PEMBAYARAN */}
         <CheckoutMetode />
 
         {/* 6. BOTTOM SECTION: TOTAL & BUTTONS */}
         <div className="flex flex-col gap-4 mt-2">
-          {/* Mengirimkan harga dinamis ke CheckoutTotal jika komponennya mendukung props total */}
           <CheckoutTotal total={formatRupiah(finalPrice)} />
 
           <div className="flex gap-4 w-full">
@@ -336,7 +399,6 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* Modal */}
       <CancelModal
         isOpen={isCancelModalOpen}
         onClose={() => setIsCancelModalOpen(false)}

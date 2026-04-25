@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { revalidatePath } from "next/cache";
 
 const statusMap: Record<
   string,
@@ -133,6 +134,12 @@ export async function POST(request: Request) {
       realOrderId,
       dbStatus,
     });
+
+    if (dbStatus === "PAID") {
+      revalidatePath("/produk");
+      revalidatePath(`/produk/${order.productId}`);
+    }
+    
     return NextResponse.json({ message: "OK" });
   } catch (error) {
     console.error("[MIDTRANS_WEBHOOK_ERROR]:", error);

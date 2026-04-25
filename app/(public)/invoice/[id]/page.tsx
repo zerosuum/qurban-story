@@ -26,7 +26,8 @@ function formatRupiah(value: string | number) {
 }
 
 function formatPaymentMethod(type: string | null) {
-  if (!type) return "-";
+  // 🔥 FIX 1: Ubah teks biar lebih make sense kalau user belum milih metode di Midtrans
+  if (!type) return "Belum dipilih";
 
   const methods: Record<string, string> = {
     gopay: "GoPay",
@@ -85,7 +86,10 @@ export default function InvoicePage() {
       if (distance < 0) {
         setTimeLeft("00:00:00");
         clearInterval(interval);
-        // window.location.reload();
+        // 🔥 FIX 2: Paksa update state 'detail' jadi KADALUARSA biar UI-nya langsung berubah otomatis!
+        setDetail((prev) =>
+          prev ? { ...prev, pembayaran: "KADALUARSA" } : prev,
+        );
         return;
       }
 
@@ -105,7 +109,9 @@ export default function InvoicePage() {
 
   const handlePayNow = async () => {
     if (!window.snap || !detail) {
-      alert("Sistem pembayaran sedang memuat. Silakan coba beberapa detik lagi.");
+      alert(
+        "Sistem pembayaran sedang memuat. Silakan coba beberapa detik lagi.",
+      );
       return;
     }
 
@@ -117,32 +123,40 @@ export default function InvoicePage() {
         !snapToken || statusBayar === "GAGAL" || statusBayar === "KADALUARSA";
 
       if (shouldRefreshToken) {
-        const response = await fetch(`/api/transactions/${detail.id}/payment-token`, {
-          method: "POST",
-        });
+        const response = await fetch(
+          `/api/transactions/${detail.id}/payment-token`,
+          {
+            method: "POST",
+          },
+        );
 
-        const result = (await response.json().catch(() => null)) as
-          | { data?: { token?: string }; message?: string }
-          | null;
+        const result = (await response.json().catch(() => null)) as {
+          data?: { token?: string };
+          message?: string;
+        } | null;
 
         if (!response.ok) {
-          throw new Error(result?.message || "Gagal menyiapkan ulang pembayaran.");
+          throw new Error(
+            result?.message || "Gagal menyiapkan ulang pembayaran.",
+          );
         }
 
         const freshToken = result?.data?.token;
 
         if (!freshToken) {
-          throw new Error("Token pembayaran tidak ditemukan. Silakan coba lagi.");
+          throw new Error(
+            "Token pembayaran tidak ditemukan. Silakan coba lagi.",
+          );
         }
 
         snapToken = freshToken;
         setDetail((prev) =>
           prev
             ? {
-              ...prev,
-              snapToken: freshToken,
-              pembayaran: "TERTUNDA",
-            }
+                ...prev,
+                snapToken: freshToken,
+                pembayaran: "TERTUNDA",
+              }
             : prev,
         );
       }
@@ -163,7 +177,8 @@ export default function InvoicePage() {
         },
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Gagal memproses pembayaran.";
+      const message =
+        error instanceof Error ? error.message : "Gagal memproses pembayaran.";
       alert(message);
     } finally {
       setIsPaying(false);

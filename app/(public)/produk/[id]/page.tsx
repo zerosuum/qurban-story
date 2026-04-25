@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+// 🔥 FIX 1: Tambahin tipe animalGroups biar TypeScript nggak marah pas kita panggil datanya
 type ProductDetailResponse = {
   id: string;
   name: string;
@@ -14,6 +15,7 @@ type ProductDetailResponse = {
   promoPrice: string | null;
   stock: number;
   images: { imageUrl: string; isPrimary: boolean }[];
+  animalGroups?: { currentSlot: number; maxSlot: number; status: string }[];
 };
 
 function formatRupiah(value: string | number) {
@@ -38,7 +40,9 @@ export default function ProductDetailPage() {
 
     const fetchDetail = async () => {
       try {
-        const res = await fetch(`/api/products/${id}`);
+        const res = await fetch(`/api/products/${id}`, {
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Gagal fetch detail produk");
         const json = await res.json();
         setProduct(json.data);
@@ -88,6 +92,15 @@ export default function ProductDetailPage() {
     product.images.length > 0
       ? product.images.map((img) => img.imageUrl)
       : ["/hewan/sapi.png"];
+
+  // 🔥 FIX 2: Logika dinamis buat nyari grup patungan yang masih "OPEN"
+  const activeGroup =
+    product.animalGroups?.find((g) => g.status === "OPEN") ||
+    product.animalGroups?.[0];
+  const currentSlot = activeGroup?.currentSlot || 0;
+  const maxSlot = activeGroup?.maxSlot || 7;
+  // Biar bar-nya nggak kelewatan kalau over-kuota (untuk jaga-jaga)
+  const progressPercentage = Math.min((currentSlot / maxSlot) * 100, 100);
 
   return (
     <div className="min-h-[calc(100vh-80px)] w-full bg-white flex flex-col items-center py-12 px-6">
@@ -148,7 +161,7 @@ export default function ProductDetailPage() {
                     displayImage === img
                       ? "border-[3px] border-[#044B57]"
                       : "border border-transparent"
-                  }`} 
+                  }`}
                 >
                   <Image
                     src={img}
@@ -194,15 +207,17 @@ export default function ProductDetailPage() {
                   <span className="font-sans text-[12px] font-semibold leading-[18px] text-neutral-900">
                     kuota terisi
                   </span>
+                  {/* 🔥 FIX 3: Teks ngikutin data dari database */}
                   <span className="font-sans text-[12px] font-semibold leading-[18px] text-neutral-900">
-                    0/7
+                    {currentSlot}/{maxSlot}
                   </span>
                 </div>
                 <div className="w-full h-2.5 bg-[#F3F3F3] rounded-full overflow-hidden flex mt-1">
+                  {/* 🔥 FIX 4: Lebar bar ngikutin persentase dinamis */}
                   <div
                     className="h-full bg-[#033C46] transition-all duration-500 rounded-r-none"
                     style={{
-                      width: `0%`,
+                      width: `${progressPercentage}%`,
                     }}
                   />
                 </div>

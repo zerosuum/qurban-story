@@ -15,6 +15,7 @@ type TransactionItem = {
   customer: string;
   produk: string;
   tanggal: string;
+  createdAt?: string;
   nominal: string;
   pembayaran: PaymentStatusUi;
   pelaporan: ReportingStatusUi;
@@ -644,6 +645,7 @@ export async function listTransactions(query: TransactionQuery) {
       customer: order.donorName,
       produk: order.product.name,
       tanggal: formatDate(order.createdAt),
+      createdAt: order.createdAt.toISOString(),
       nominal: order.totalPrice.toString(),
       pembayaran,
       pelaporan,
@@ -774,6 +776,11 @@ export async function getTransactionById(
       totalPrice: true,
       status: true,
       createdAt: true,
+      payment: {
+        select: {
+          paymentType: true,
+        },
+      },
       product: {
         select: {
           name: true,
@@ -851,7 +858,7 @@ export async function getTransactionById(
     createdAt: order.createdAt.toISOString(),
     nominal: order.totalPrice.toString(),
     snapToken: null,
-    paymentMethod: null,
+    paymentMethod: order.payment?.paymentType || null,
     pembayaran: mapOrderStatusToUi(order.status),
     pelaporan: mapReportsToUiStatus(
       getEffectiveReports(order.reports, order.group?.reports),

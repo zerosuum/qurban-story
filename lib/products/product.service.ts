@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, GroupStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 type ProductQuery = {
@@ -30,13 +30,18 @@ function toDecimal(value: number | string) {
     return new Prisma.Decimal(value);
   }
 
-  const normalized = value.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+  const normalized = value
+    .replace(/[^\d,.-]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
   return new Prisma.Decimal(normalized);
 }
 
-async function resolveSpeciesId(speciesId?: string) {
+async function resolveSpeciesId(speciesId?: string, productType?: string) {
   if (speciesId) {
-    const species = await prisma.animalSpecies.findUnique({ where: { id: speciesId } });
+    const species = await prisma.animalSpecies.findUnique({
+      where: { id: speciesId },
+    });
 
     if (!species) {
       throw new Error("Spesies tidak ditemukan.");
@@ -45,16 +50,23 @@ async function resolveSpeciesId(speciesId?: string) {
     return species.id;
   }
 
-  const fallbackSpecies = await prisma.animalSpecies.findFirst({
-    orderBy: { createdAt: "asc" },
-    select: { id: true },
+  const isPatungan = productType?.toLowerCase().includes("patungan");
+  const targetCapacity = isPatungan ? 7 : 1;
+
+  let suitableSpecies = await prisma.animalSpecies.findFirst({
+    where: { maxParticipants: targetCapacity },
   });
 
-  if (!fallbackSpecies) {
-    throw new Error("Data species belum tersedia. Jalankan seeding species terlebih dahulu.");
+  if (!suitableSpecies) {
+    suitableSpecies = await prisma.animalSpecies.create({
+      data: {
+        name: isPatungan ? "Hewan Patungan (Auto)" : "Hewan Full (Auto)",
+        maxParticipants: targetCapacity,
+      },
+    });
   }
 
-  return fallbackSpecies.id;
+  return suitableSpecies.id;
 }
 
 function shouldAppendTypeToName(type?: string) {
@@ -89,6 +101,11 @@ function mapProduct(product: {
     isPrimary: boolean;
     createdAt: Date;
   }>;
+  groups?: Array<{
+    currentSlot: number;
+    maxSlot: number;
+    status: GroupStatus;
+  }>;
 }) {
   const activePromo = product.promos?.[0];
 
@@ -99,11 +116,16 @@ function mapProduct(product: {
     const basePrice = Number(product.price.toString());
 
     if (activePromo.discountType === "PERCENTAGE") {
-      promoPrice = Math.max(0, basePrice - (basePrice * promoValue) / 100).toString();
-    } else if (activePromo.discountType === "NOMINAL" || activePromo.discountType === "FIXED_AMOUNT") {
+      promoPrice = Math.max(
+        0,
+        basePrice - (basePrice * promoValue) / 100,
+      ).toString();
+    } else if (
+      activePromo.discountType === "NOMINAL" ||
+      activePromo.discountType === "FIXED_AMOUNT"
+    ) {
       promoPrice = Math.max(0, basePrice - promoValue).toString();
     } else {
-      // For custom type FINAL_PRICE, we treat discountValue as the resulting promotional price.
       promoPrice = activePromo.discountValue.toString();
     }
   }
@@ -122,7 +144,14 @@ function mapProduct(product: {
         imageUrl: image.imageUrl,
         isPrimary: image.isPrimary,
       })) ?? [],
+    animalGroups:
+      product.groups?.map((group) => ({
+        currentSlot: group.currentSlot,
+        maxSlot: group.maxSlot,
+        status: group.status,
+      })) ?? [],
     promos: undefined,
+    groups: undefined,
   };
 }
 
@@ -139,12 +168,12 @@ export async function listProducts(query: ProductQuery) {
     ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
     ...(keyword
       ? {
-        OR: [
-          { name: { contains: keyword, mode: "insensitive" } },
-          { weight: { contains: keyword, mode: "insensitive" } },
-          { description: { contains: keyword, mode: "insensitive" } },
-        ],
-      }
+          OR: [
+            { name: { contains: keyword, mode: "insensitive" } },
+            { weight: { contains: keyword, mode: "insensitive" } },
+            { description: { contains: keyword, mode: "insensitive" } },
+          ],
+        }
       : {}),
   };
 
@@ -164,6 +193,7 @@ export async function listProducts(query: ProductQuery) {
         images: {
           orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
         },
+        groups: true,
       },
       orderBy: { createdAt: "desc" },
       skip,
@@ -203,6 +233,7 @@ export async function getProductById(id: string) {
       images: {
         orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
       },
+      groups: true,
     },
   });
 
@@ -214,7 +245,7 @@ export async function getProductById(id: string) {
 }
 
 export async function createProduct(payload: ProductPayload) {
-  const speciesId = await resolveSpeciesId(payload.speciesId);
+  const speciesId = await resolveSpeciesId(payload.speciesId, payload.type);
   const hasDiscount =
     payload.discountType !== undefined &&
     payload.discountType !== null &&
@@ -223,7 +254,8 @@ export async function createProduct(payload: ProductPayload) {
     `${payload.discountValue}`.trim() !== "";
 
   const computedName =
-    shouldAppendTypeToName(payload.type) && !payload.name.toLowerCase().includes((payload.type as string).toLowerCase())
+    shouldAppendTypeToName(payload.type) &&
+    !payload.name.toLowerCase().includes((payload.type as string).toLowerCase())
       ? `${payload.name} (${payload.type})`
       : payload.name;
 
@@ -238,23 +270,29 @@ export async function createProduct(payload: ProductPayload) {
       isActive: payload.isActive ?? true,
       promos: hasDiscount
         ? {
-          create: {
-            discountType: payload.discountType,
-            discountValue: toDecimal(payload.discountValue as string | number),
-            startDate: payload.discountStartDate ? new Date(payload.discountStartDate) : new Date(),
-            endDate: payload.discountEndDate ? new Date(payload.discountEndDate) : null,
-            isActive: true,
-          },
-        }
+            create: {
+              discountType: payload.discountType,
+              discountValue: toDecimal(
+                payload.discountValue as string | number,
+              ),
+              startDate: payload.discountStartDate
+                ? new Date(payload.discountStartDate)
+                : new Date(),
+              endDate: payload.discountEndDate
+                ? new Date(payload.discountEndDate)
+                : null,
+              isActive: true,
+            },
+          }
         : undefined,
       images:
         payload.imageUrls && payload.imageUrls.length > 0
           ? {
-            create: payload.imageUrls.map((imageUrl, index) => ({
-              imageUrl,
-              isPrimary: index === 0,
-            })),
-          }
+              create: payload.imageUrls.map((imageUrl, index) => ({
+                imageUrl,
+                isPrimary: index === 0,
+              })),
+            }
           : undefined,
     },
     include: {
@@ -272,8 +310,14 @@ export async function createProduct(payload: ProductPayload) {
   return mapProduct(product);
 }
 
-export async function updateProduct(id: string, payload: Partial<ProductPayload>) {
-  const existing = await prisma.product.findUnique({ where: { id }, select: { id: true } });
+export async function updateProduct(
+  id: string,
+  payload: Partial<ProductPayload>,
+) {
+  const existing = await prisma.product.findUnique({
+    where: { id },
+    select: { id: true },
+  });
 
   if (!existing) {
     return null;
@@ -281,10 +325,10 @@ export async function updateProduct(id: string, payload: Partial<ProductPayload>
 
   const data: Prisma.ProductUpdateInput = {};
 
-  if (payload.speciesId !== undefined) {
+  if (payload.speciesId !== undefined || payload.type !== undefined) {
     data.species = {
       connect: {
-        id: await resolveSpeciesId(payload.speciesId),
+        id: await resolveSpeciesId(payload.speciesId, payload.type),
       },
     };
   }
@@ -297,10 +341,13 @@ export async function updateProduct(id: string, payload: Partial<ProductPayload>
   if (payload.isActive !== undefined) data.isActive = payload.isActive;
 
   if (payload.type !== undefined && payload.name !== undefined) {
-    const isTypeIncluded = payload.name.toLowerCase().includes(payload.type.toLowerCase());
-    data.name = shouldAppendTypeToName(payload.type) && !isTypeIncluded
-      ? `${payload.name} (${payload.type})`
-      : payload.name;
+    const isTypeIncluded = payload.name
+      .toLowerCase()
+      .includes(payload.type.toLowerCase());
+    data.name =
+      shouldAppendTypeToName(payload.type) && !isTypeIncluded
+        ? `${payload.name} (${payload.type})`
+        : payload.name;
   }
 
   await prisma.product.update({
@@ -334,14 +381,22 @@ export async function updateProduct(id: string, payload: Partial<ProductPayload>
     const discountType = payload.discountType ?? null;
     const discountValue = payload.discountValue ?? null;
 
-    if (discountType && discountValue !== null && `${discountValue}`.trim() !== "") {
+    if (
+      discountType &&
+      discountValue !== null &&
+      `${discountValue}`.trim() !== ""
+    ) {
       await prisma.promo.create({
         data: {
           productId: id,
           discountType,
           discountValue: toDecimal(discountValue as string | number),
-          startDate: payload.discountStartDate ? new Date(payload.discountStartDate) : new Date(),
-          endDate: payload.discountEndDate ? new Date(payload.discountEndDate) : null,
+          startDate: payload.discountStartDate
+            ? new Date(payload.discountStartDate)
+            : new Date(),
+          endDate: payload.discountEndDate
+            ? new Date(payload.discountEndDate)
+            : null,
           isActive: true,
         },
       });
@@ -384,13 +439,18 @@ export async function updateProduct(id: string, payload: Partial<ProductPayload>
 }
 
 export async function deleteProduct(id: string) {
-  const existing = await prisma.product.findUnique({ where: { id }, select: { id: true } });
+  const existing = await prisma.product.findUnique({
+    where: { id },
+    select: { id: true },
+  });
 
   if (!existing) {
     return { status: "not_found" as const };
   }
 
-  const transactionCount = await prisma.order.count({ where: { productId: id } });
+  const transactionCount = await prisma.order.count({
+    where: { productId: id },
+  });
 
   if (transactionCount > 0) {
     return { status: "has_transactions" as const };

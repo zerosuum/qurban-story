@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 const SUPER_ADMIN_EMAILS = [
   "nawwafzayyan27@gmail.com",
   "nawwafzayyanmusyafa@mail.ugm.ac.id",
+  "delaaaanr@gmail.com",
 ];
 
 function isSuperAdminEmail(email: string) {

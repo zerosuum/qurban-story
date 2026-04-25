@@ -11,6 +11,7 @@ type ProductApiResponse = {
   promoPrice: string | null;
   images: { imageUrl: string; isPrimary: boolean }[];
   isActive?: boolean;
+  animalGroups?: { currentSlot: number; maxSlot: number; status: string }[];
 };
 
 function formatRupiah(value: string | number) {
@@ -35,6 +36,7 @@ export default function ProdukPage() {
       try {
         const res = await fetch("/api/products?pageSize=20&isActive=true", {
           signal: controller.signal,
+          cache: "no-store",
         });
         if (!res.ok) throw new Error("Gagal fetch produk");
         const json = await res.json();
@@ -93,6 +95,10 @@ export default function ProdukPage() {
                 .toLowerCase()
                 .includes("patungan");
 
+              const activeGroup =
+                product.animalGroups?.find((g) => g.status === "OPEN") ||
+                product.animalGroups?.[0];
+
               return (
                 <ProductCard
                   key={product.id}
@@ -110,7 +116,14 @@ export default function ProdukPage() {
                       ? `${product.weight}`
                       : "Berat tidak spesifik"
                   }
-                  quota={isPatungan ? { current: 0, max: 7 } : undefined}
+                  quota={
+                    isPatungan
+                      ? {
+                          current: activeGroup?.currentSlot || 0,
+                          max: activeGroup?.maxSlot || 7,
+                        }
+                      : undefined
+                  }
                 />
               );
             })}

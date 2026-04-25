@@ -19,6 +19,7 @@ type DetailResponse = {
     customer: string;
     produk: string;
     tanggal: string;
+    createdAt: string;
     nominal: string;
     paymentMethod: string | null;
     pembayaran: string;
@@ -38,7 +39,7 @@ function formatRupiah(value: string | number) {
 }
 
 function formatPaymentMethod(type: string | null) {
-  if (!type) return "-";
+  if (!type) return "Belum dipilih";
   const methods: Record<string, string> = {
     gopay: "GoPay",
     qris: "QRIS",
@@ -104,6 +105,19 @@ export default function DetailTransaksiPage() {
     );
   }
 
+  let statusPembayaran = detail.pembayaran;
+  const isPending =
+    statusPembayaran === "TERTUNDA" || statusPembayaran === "PAYMENT_PENDING";
+
+  if (isPending && detail.createdAt) {
+    const isExpired =
+      new Date().getTime() - new Date(detail.createdAt).getTime() >
+      24 * 60 * 60 * 1000;
+    if (isExpired) {
+      statusPembayaran = "KADALUARSA";
+    }
+  }
+
   const isKambing = detail.produk.toLowerCase().includes("kambing");
   const isSapi = detail.produk.toLowerCase().includes("sapi");
   const kodeHewan = isKambing ? "KMB-001" : isSapi ? "SPI-001" : "PRD-001";
@@ -111,7 +125,6 @@ export default function DetailTransaksiPage() {
   return (
     <div className="min-h-[calc(100vh-80px)] w-full bg-white flex flex-col items-center py-12 px-6">
       <div className="w-full max-w-[792px] flex flex-col gap-6">
-        {/* Tombol Kembali */}
         <button
           onClick={() => router.back()}
           className="flex items-center gap-2 w-max px-0 pt-6 pb-2 text-[#033C46] font-bold text-[16px] leading-[24px] hover:opacity-70 transition-opacity cursor-pointer bg-transparent border-none outline-none"
@@ -156,7 +169,7 @@ export default function DetailTransaksiPage() {
           harga={`${formatRupiah(detail.nominal)}`}
         />
 
-        {detail.pembayaran === "BERHASIL" ? (
+        {statusPembayaran === "BERHASIL" ? (
           <>
             <ProgressPelaporan />
             <DocumentationCard
@@ -173,9 +186,9 @@ export default function DetailTransaksiPage() {
               </h2>
               <div className="flex w-full px-4 py-3 rounded-lg bg-[#FEF1DA] border border-[#FEF1DA]">
                 <p className="text-[16px] italic leading-[24px] text-neutral-900">
-                  {detail.pembayaran === "KADALUARSA"
+                  {statusPembayaran === "KADALUARSA"
                     ? "Fitur ini tidak tersedia karena transaksi kadaluarsa. Silakan buat transaksi baru."
-                    : detail.pembayaran === "GAGAL"
+                    : statusPembayaran === "GAGAL"
                       ? "Fitur ini tidak tersedia karena pembayaran gagal. Silakan coba bayar kembali untuk melanjutkan transaksi."
                       : "Fitur ini tidak tersedia karena pembayaran tertunda. Silakan bayar untuk melanjutkan transaksi."}
                 </p>
@@ -188,9 +201,9 @@ export default function DetailTransaksiPage() {
               </h2>
               <div className="flex w-full px-4 py-3 rounded-lg bg-[#FEF1DA] border border-[#FEF1DA]">
                 <p className="text-[16px] italic leading-[24px] text-neutral-900">
-                  {detail.pembayaran === "KADALUARSA"
+                  {statusPembayaran === "KADALUARSA"
                     ? "Fitur ini tidak tersedia karena transaksi kadaluarsa. Silakan buat transaksi baru."
-                    : detail.pembayaran === "GAGAL"
+                    : statusPembayaran === "GAGAL"
                       ? "Fitur ini tidak tersedia karena pembayaran gagal. Silakan coba bayar kembali untuk melanjutkan transaksi."
                       : "Fitur ini tidak tersedia karena pembayaran tertunda. Silakan bayar untuk melanjutkan transaksi."}
                 </p>
@@ -203,9 +216,9 @@ export default function DetailTransaksiPage() {
               </h2>
               <div className="flex w-full px-4 py-3 rounded-lg bg-[#FEF1DA] border border-[#FEF1DA]">
                 <p className="text-[16px] italic leading-[24px] text-neutral-900">
-                  {detail.pembayaran === "KADALUARSA"
+                  {statusPembayaran === "KADALUARSA"
                     ? "Fitur ini tidak tersedia karena transaksi kadaluarsa. Silakan buat transaksi baru."
-                    : detail.pembayaran === "GAGAL"
+                    : statusPembayaran === "GAGAL"
                       ? "Fitur ini tidak tersedia karena pembayaran gagal. Silakan coba bayar kembali untuk melanjutkan transaksi."
                       : "Fitur ini tidak tersedia karena pembayaran tertunda. Silakan bayar untuk melanjutkan transaksi."}
                 </p>
