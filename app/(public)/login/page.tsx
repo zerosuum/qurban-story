@@ -7,31 +7,28 @@ export default function LoginPage() {
   const { status } = useSession();
 
   if (status === "loading") return null;
-
-  if (status === "authenticated") {
-    return null;
-  }
+  if (status === "authenticated") return null;
 
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-secondary-500 flex items-center justify-center pb-12">
+    <div className="min-h-[calc(100vh-80px)] bg-secondary-500 flex items-center justify-center pb-12 px-4">
       <div
         className="
-        w-120
-        max-w-120
+        w-full
+        max-w-[480px]
         flex flex-col
         gap-6
-        px-8 py-12
+        px-6 sm:px-8 py-10 sm:py-12 
         bg-white
         border border-neutral-100
         rounded-xl
         shadow-[0_8px_28px_-6px_rgba(24,39,75,0.12),0_18px_88px_-4px_rgba(24,39,75,0.14)]
       "
       >
-        <h1 className="text-[36px] leading-11.5 font-bold text-primary-500 text-center">
+        <h1 className="text-[28px] sm:text-[36px] leading-[1.2] font-bold text-primary-500 text-center">
           Masuk
         </h1>
 
-        <p className="text-neutral-400 text-center text-[16px] leading-6">
+        <p className="text-neutral-400 text-center text-[14px] sm:text-[16px] leading-6">
           Masuk menggunakan akun Google untuk melanjutkan.
         </p>
 
@@ -39,17 +36,18 @@ export default function LoginPage() {
           onClick={() => signIn("google", { callbackUrl: "/" })}
           className="
             flex items-center justify-center gap-3
-            w-full py-4
+            w-full py-3 sm:py-4
             border-2 border-neutral-100
             rounded-xl
             bg-white
             shadow-sm
             hover:bg-neutral-50
             transition
+            text-[14px] sm:text-[16px] font-medium
           "
         >
           {/* Google Icon */}
-          <svg className="w-5 h-5" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
             <path
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
               fill="#4285F4"
@@ -70,7 +68,7 @@ export default function LoginPage() {
           Masuk dengan Google
         </button>
 
-        <p className="text-center text-[16px] text-neutral-400">
+        <p className="text-center text-[14px] sm:text-[16px] text-neutral-400">
           Belum punya akun?{" "}
           <Link href="/register" className="font-bold text-primary-500">
             Daftar di sini

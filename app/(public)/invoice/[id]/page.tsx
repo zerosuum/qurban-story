@@ -26,7 +26,6 @@ function formatRupiah(value: string | number) {
 }
 
 function formatPaymentMethod(type: string | null) {
-  // 🔥 FIX 1: Ubah teks biar lebih make sense kalau user belum milih metode di Midtrans
   if (!type) return "Belum dipilih";
 
   const methods: Record<string, string> = {
@@ -86,7 +85,6 @@ export default function InvoicePage() {
       if (distance < 0) {
         setTimeLeft("00:00:00");
         clearInterval(interval);
-        // 🔥 FIX 2: Paksa update state 'detail' jadi KADALUARSA biar UI-nya langsung berubah otomatis!
         setDetail((prev) =>
           prev ? { ...prev, pembayaran: "KADALUARSA" } : prev,
         );
@@ -217,10 +215,9 @@ export default function InvoicePage() {
     iconSvg = (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        width="96"
-        height="96"
         viewBox="0 0 96 96"
         fill="none"
+        className="w-[80px] h-[80px] sm:w-[96px] sm:h-[96px]"
         style={{ aspectRatio: "1/1" }}
       >
         <mask
@@ -250,10 +247,9 @@ export default function InvoicePage() {
     iconSvg = (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        width="96"
-        height="96"
         viewBox="0 0 96 96"
         fill="none"
+        className="w-[80px] h-[80px] sm:w-[96px] sm:h-[96px]"
         style={{ aspectRatio: "1/1" }}
       >
         <mask
@@ -283,10 +279,9 @@ export default function InvoicePage() {
     iconSvg = (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        width="96"
-        height="72"
         viewBox="0 0 96 72"
         fill="none"
+        className="w-[80px] h-[60px] sm:w-[96px] sm:h-[72px]"
         style={{ aspectRatio: "4/3" }}
       >
         <path
@@ -303,10 +298,9 @@ export default function InvoicePage() {
     iconSvg = (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        width="96"
-        height="96"
         viewBox="0 0 96 96"
         fill="none"
+        className="w-[80px] h-[80px] sm:w-[96px] sm:h-[96px]"
         style={{ aspectRatio: "1/1" }}
       >
         <mask
@@ -331,16 +325,15 @@ export default function InvoicePage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] bg-neutral-50 py-12 px-6">
-      <div className="flex w-full max-w-[592px] p-12 flex-col items-center gap-8 rounded-xl border border-neutral-200 bg-white shadow-[0_2px_4px_-2px_rgba(24,39,75,0.12),0_4px_4px_-2px_rgba(24,39,75,0.08)]">
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] bg-neutral-50 py-8 sm:py-12 px-4 sm:px-6">
+      <div className="flex w-full max-w-[592px] p-6 sm:p-12 flex-col items-center gap-6 sm:gap-8 rounded-xl border border-neutral-200 bg-white shadow-[0_2px_4px_-2px_rgba(24,39,75,0.12),0_4px_4px_-2px_rgba(24,39,75,0.08)]">
         {/* Ikon & Badge */}
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-3 sm:gap-4">
           {iconSvg}
           <div
-            className={`flex px-6 py-2 justify-center items-center gap-[10px] rounded-full ${badgeColor}`}
+            className={`flex px-5 sm:px-6 py-1.5 sm:py-2 justify-center items-center gap-[10px] rounded-full ${badgeColor}`}
           >
-            {/* Teks ngambil dari status yang diseragamin */}
-            <span className="text-white font-sans text-[16px] font-bold uppercase tracking-wider">
+            <span className="text-white font-sans text-[14px] sm:text-[16px] font-bold uppercase tracking-wider text-center">
               {statusBayar}
             </span>
           </div>
@@ -348,67 +341,70 @@ export default function InvoicePage() {
 
         {/* Judul & Deskripsi */}
         <div className="flex flex-col gap-2 w-full">
-          <h2 className="self-stretch text-[#01171A] text-center font-sans text-[24px] font-bold leading-[32px]">
+          <h2 className="self-stretch text-[#01171A] text-center font-sans text-[20px] sm:text-[24px] font-bold leading-tight sm:leading-[32px]">
             {title}
           </h2>
-          <p className="self-stretch text-[#01171A] text-center font-sans text-[18px] font-medium leading-[27px]">
+          <p className="self-stretch text-[#01171A] text-center font-sans text-[14px] sm:text-[18px] font-medium leading-[22px] sm:leading-[27px]">
             {description}
           </p>
         </div>
 
         {/* Box Detail Identitas Trx */}
-        <div className="flex p-6 flex-col items-start gap-4 self-stretch rounded-xl bg-[#FFF6EC]">
-          <div className="flex justify-between items-center w-full">
-            <span className="text-[#044B57] font-sans text-[18px] font-normal leading-[27px]">
+        <div className="flex p-4 sm:p-6 flex-col items-start gap-4 self-stretch rounded-xl bg-[#FFF6EC]">
+          <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center w-full gap-1 sm:gap-0">
+            <span className="text-[#044B57] font-sans text-[14px] sm:text-[18px] font-normal leading-[20px] sm:leading-[27px]">
               Nomor Invoice
             </span>
-            <span className="text-[#022D34] font-sans text-[18px] font-bold leading-[27px]">
+            <span className="text-[#022D34] font-sans text-[16px] sm:text-[18px] font-bold leading-[22px] sm:leading-[27px] break-all">
               {detail.invoice}
             </span>
           </div>
-          <div className="flex justify-between items-center w-full">
-            <span className="text-[#044B57] font-sans text-[18px] font-normal leading-[27px]">
+
+          <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center w-full gap-1 sm:gap-0">
+            <span className="text-[#044B57] font-sans text-[14px] sm:text-[18px] font-normal leading-[20px] sm:leading-[27px]">
               Nominal
             </span>
-            <span className="text-[#022D34] font-sans text-[18px] font-bold leading-[27px]">
+            <span className="text-[#022D34] font-sans text-[16px] sm:text-[18px] font-bold leading-[22px] sm:leading-[27px]">
               {formatRupiah(detail.nominal)}
             </span>
           </div>
-          <div className="flex justify-between items-center w-full">
-            <span className="text-[#044B57] font-sans text-[18px] font-normal leading-[27px]">
+
+          <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center w-full gap-1 sm:gap-0">
+            <span className="text-[#044B57] font-sans text-[14px] sm:text-[18px] font-normal leading-[20px] sm:leading-[27px]">
               Metode Pembayaran
             </span>
-            <span className="text-[#022D34] font-sans text-[18px] font-bold leading-[27px]">
+            <span className="text-[#022D34] font-sans text-[16px] sm:text-[18px] font-bold leading-[22px] sm:leading-[27px]">
               {formatPaymentMethod(detail.paymentMethod)}
             </span>
           </div>
-          <div className="flex justify-between items-center w-full">
-            <span className="text-[#044B57] font-sans text-[18px] font-normal leading-[27px]">
+
+          <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center w-full gap-1 sm:gap-0">
+            <span className="text-[#044B57] font-sans text-[14px] sm:text-[18px] font-normal leading-[20px] sm:leading-[27px]">
               Tanggal Transaksi
             </span>
-            <span className="text-[#022D34] font-sans text-[18px] font-bold leading-[27px]">
+            <span className="text-[#022D34] font-sans text-[16px] sm:text-[18px] font-bold leading-[22px] sm:leading-[27px]">
               {detail.tanggal}
             </span>
           </div>
         </div>
 
-        {/* 🔥 BOX TIMER (KHUSUS MENUNGGU PEMBAYARAN) 🔥 */}
+        {/* BOX TIMER (KHUSUS MENUNGGU PEMBAYARAN) */}
         {statusBayar === "MENUNGGU PEMBAYARAN" && (
-          <div className="flex flex-col items-center justify-center p-4 gap-1 w-full rounded-xl bg-[#FEF1DA] border border-[#E67E22]/20">
-            <span className="font-sans text-[#044B57] text-[14px]">
+          <div className="flex flex-col items-center justify-center p-3 sm:p-4 gap-1 w-full rounded-xl bg-[#FEF1DA] border border-[#E67E22]/20">
+            <span className="font-sans text-[#044B57] text-[12px] sm:text-[14px] text-center">
               Sisa Waktu Pembayaran
             </span>
-            <span className="font-sans text-[#022D34] text-[20px] font-bold">
+            <span className="font-sans text-[#022D34] text-[18px] sm:text-[20px] font-bold">
               {timeLeft}
             </span>
           </div>
         )}
 
         {/* Tombol Aksi */}
-        <div className="flex gap-4 w-full">
+        <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 w-full">
           <button
             onClick={() => router.push("/dashboard")}
-            className="flex h-10 px-4 py-2 justify-center items-center gap-[10px] flex-1 rounded-xl border border-[#033C46] text-[#033C46] text-center font-sans text-[16px] font-bold leading-[24px] hover:bg-neutral-50 hover:text-primary-600 hover:border-primary-600 active:scale-95 transition-all duration-200"
+            className="flex h-[44px] sm:h-10 px-4 py-2 justify-center items-center flex-1 rounded-xl border border-[#033C46] text-[#033C46] text-center font-sans text-[14px] sm:text-[16px] font-bold leading-[24px] hover:bg-neutral-50 hover:text-primary-600 hover:border-primary-600 active:scale-95 transition-all duration-200"
           >
             Kembali ke Dashboard
           </button>
@@ -428,7 +424,7 @@ export default function InvoicePage() {
               }
             }}
             disabled={isPaying}
-            className="flex h-10 px-4 py-2 justify-center items-center gap-[10px] flex-1 rounded-xl bg-[#044B57] text-white text-center font-sans text-[16px] font-bold leading-[24px] hover:bg-primary-600 hover:shadow-md hover:shadow-neutral-200 active:scale-95 transition-all duration-200"
+            className="flex h-[44px] sm:h-10 px-4 py-2 justify-center items-center flex-1 rounded-xl bg-[#044B57] text-white text-center font-sans text-[14px] sm:text-[16px] font-bold leading-[24px] hover:bg-primary-600 hover:shadow-md hover:shadow-neutral-200 active:scale-95 transition-all duration-200 disabled:opacity-50"
           >
             {statusBayar === "BERHASIL"
               ? "Lihat Detail Transaksi"
