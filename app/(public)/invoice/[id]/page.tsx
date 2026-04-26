@@ -118,7 +118,7 @@ export default function InvoicePage() {
     try {
       let snapToken = detail.snapToken;
       const shouldRefreshToken =
-        !snapToken || statusBayar === "GAGAL" || statusBayar === "KADALUARSA";
+        !snapToken || statusBayar === "GAGAL";
 
       if (shouldRefreshToken) {
         const response = await fetch(
@@ -415,8 +415,8 @@ export default function InvoicePage() {
                 router.push(`/riwayat-trx/${detail.id}`);
               } else if (
                 statusBayar === "MENUNGGU PEMBAYARAN" ||
-                statusBayar === "GAGAL" ||
-                statusBayar === "KADALUARSA"
+                statusBayar === "GAGAL"
+                // statusBayar === "KADALUARSA"
               ) {
                 handlePayNow();
               } else {
@@ -430,7 +430,8 @@ export default function InvoicePage() {
               ? "Lihat Detail Transaksi"
               : statusBayar === "MENUNGGU PEMBAYARAN"
                 ? "Bayar Sekarang"
-                : statusBayar === "GAGAL" || statusBayar === "KADALUARSA"
+                : statusBayar === "GAGAL"
+                // statusBayar === "KADALUARSA"
                   ? isPaying
                     ? "Menyiapkan Pembayaran..."
                     : "Lanjutkan Pembayaran"
