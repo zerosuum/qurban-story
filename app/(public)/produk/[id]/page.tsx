@@ -5,7 +5,6 @@ import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-// 🔥 FIX 1: Tambahin tipe animalGroups biar TypeScript nggak marah pas kita panggil datanya
 type ProductDetailResponse = {
   id: string;
   name: string;
@@ -93,14 +92,16 @@ export default function ProductDetailPage() {
       ? product.images.map((img) => img.imageUrl)
       : ["/hewan/sapi.png"];
 
-  // 🔥 FIX 2: Logika dinamis buat nyari grup patungan yang masih "OPEN"
   const activeGroup =
     product.animalGroups?.find((g) => g.status === "OPEN") ||
     product.animalGroups?.[0];
   const currentSlot = activeGroup?.currentSlot || 0;
   const maxSlot = activeGroup?.maxSlot || 7;
-  // Biar bar-nya nggak kelewatan kalau over-kuota (untuk jaga-jaga)
   const progressPercentage = Math.min((currentSlot / maxSlot) * 100, 100);
+
+  const isOutOfStock = product.stock <= 0;
+  const isGroupFull = isPatungan && currentSlot >= maxSlot;
+  const isDisabled = isOutOfStock || isGroupFull;
 
   return (
     <div className="min-h-[calc(100vh-80px)] w-full bg-white flex flex-col items-center py-12 px-6">
@@ -110,7 +111,6 @@ export default function ProductDetailPage() {
           href="/produk"
           className="flex items-center gap-2 w-full px-0 pt-6 pb-2 text-primary-600 font-bold text-[16px] leading-6 hover:opacity-80"
         >
-          {/* ICON */}
           <svg
             width="24"
             height="24"
@@ -207,55 +207,74 @@ export default function ProductDetailPage() {
                   <span className="font-sans text-[12px] font-semibold leading-[18px] text-neutral-900">
                     kuota terisi
                   </span>
-                  {/* 🔥 FIX 3: Teks ngikutin data dari database */}
                   <span className="font-sans text-[12px] font-semibold leading-[18px] text-neutral-900">
                     {currentSlot}/{maxSlot}
                   </span>
                 </div>
                 <div className="w-full h-2.5 bg-[#F3F3F3] rounded-full overflow-hidden flex mt-1">
-                  {/* 🔥 FIX 4: Lebar bar ngikutin persentase dinamis */}
                   <div
                     className="h-full bg-[#033C46] transition-all duration-500 rounded-r-none"
-                    style={{
-                      width: `${progressPercentage}%`,
-                    }}
+                    style={{ width: `${progressPercentage}%` }}
                   />
                 </div>
               </div>
             )}
 
-            {/* Tombol Beli */}
-            <Link
-              href={`/checkout/${product.id}`}
-              className="flex justify-center items-center h-10 px-6 py-2 mt-4 gap-2.5 rounded-xl bg-[#044B57] text-white font-sans font-bold text-[16px] leading-[24px] hover:bg-[#033C46] active:scale-95 transition-all w-max"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
+            {/* 🔥 TOMBOL BELI (DIUBAH JADI DINAMIS) */}
+            {isDisabled ? (
+              <button
+                disabled
+                className="flex justify-center items-center h-10 px-6 py-2 mt-4 gap-2.5 rounded-xl bg-neutral-300 text-white font-sans font-bold text-[16px] leading-[24px] cursor-not-allowed w-max"
               >
-                <mask
-                  id="mask0_cart"
-                  style={{ maskType: "alpha" }}
-                  maskUnits="userSpaceOnUse"
-                  x="0"
-                  y="0"
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
                   width="24"
                   height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
                 >
-                  <rect width="24" height="24" fill="#D9D9D9" />
-                </mask>
-                <g mask="url(#mask0_cart)">
                   <path
-                    d="M5.5875 21.4125C5.19583 21.0208 5 20.55 5 20C5 19.45 5.19583 18.9792 5.5875 18.5875C5.97917 18.1958 6.45 18 7 18C7.55 18 8.02083 18.1958 8.4125 18.5875C8.80417 18.9792 9 19.45 9 20C9 20.55 8.80417 21.0208 8.4125 21.4125C8.02083 21.8042 7.55 22 7 22C6.45 22 5.97917 21.8042 5.5875 21.4125ZM15.5875 21.4125C15.1958 21.0208 15 20.55 15 20C15 19.45 15.1958 18.9792 15.5875 18.5875C15.9792 18.1958 16.45 18 17 18C17.55 18 18.0208 18.1958 18.4125 18.5875C18.8042 18.9792 19 19.45 19 20C19 20.55 18.8042 21.0208 18.4125 21.4125C18.0208 21.8042 17.55 22 17 22C16.45 22 15.9792 21.8042 15.5875 21.4125ZM6.15 6L8.55 11H15.55L18.3 6H6.15ZM5.2 4H19.95C20.3333 4 20.625 4.17083 20.825 4.5125C21.025 4.85417 21.0333 5.2 20.85 5.55L17.3 11.95C17.1167 12.2833 16.8708 12.5417 16.5625 12.725C16.2542 12.9083 15.9167 13 15.55 13H8.1L7 15H19V17H7C6.25 17 5.68333 16.6708 5.3 16.0125C4.91667 15.3542 4.9 14.7 5.25 14.05L6.6 11.6L3 4H1V2H4.25L5.2 4Z"
-                    fill="white"
+                    d="M18 6L6 18M6 6l12 12"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
                   />
-                </g>
-              </svg>
-              Beli Sekarang
-            </Link>
+                </svg>
+                {isOutOfStock ? "Stok Habis" : "Kuota Penuh"}
+              </button>
+            ) : (
+              <Link
+                href={`/checkout/${product.id}`}
+                className="flex justify-center items-center h-10 px-6 py-2 mt-4 gap-2.5 rounded-xl bg-[#044B57] text-white font-sans font-bold text-[16px] leading-[24px] hover:bg-[#033C46] active:scale-95 transition-all w-max"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <mask
+                    id="mask0_cart"
+                    style={{ maskType: "alpha" }}
+                    maskUnits="userSpaceOnUse"
+                    x="0"
+                    y="0"
+                    width="24"
+                    height="24"
+                  >
+                    <rect width="24" height="24" fill="#D9D9D9" />
+                  </mask>
+                  <g mask="url(#mask0_cart)">
+                    <path
+                      d="M5.5875 21.4125C5.19583 21.0208 5 20.55 5 20C5 19.45 5.19583 18.9792 5.5875 18.5875C5.97917 18.1958 6.45 18 7 18C7.55 18 8.02083 18.1958 8.4125 18.5875C8.80417 18.9792 9 19.45 9 20C9 20.55 8.80417 21.0208 8.4125 21.4125C8.02083 21.8042 7.55 22 7 22C6.45 22 5.97917 21.8042 5.5875 21.4125ZM15.5875 21.4125C15.1958 21.0208 15 20.55 15 20C15 19.45 15.1958 18.9792 15.5875 18.5875C15.9792 18.1958 16.45 18 17 18C17.55 18 18.0208 18.1958 18.4125 18.5875C18.8042 18.9792 19 19.45 19 20C19 20.55 18.8042 21.0208 18.4125 21.4125C18.0208 21.8042 17.55 22 17 22C16.45 22 15.9792 21.8042 15.5875 21.4125ZM6.15 6L8.55 11H15.55L18.3 6H6.15ZM5.2 4H19.95C20.3333 4 20.625 4.17083 20.825 4.5125C21.025 4.85417 21.0333 5.2 20.85 5.55L17.3 11.95C17.1167 12.2833 16.8708 12.5417 16.5625 12.725C16.2542 12.9083 15.9167 13 15.55 13H8.1L7 15H19V17H7C6.25 17 5.68333 16.6708 5.3 16.0125C4.91667 15.3542 4.9 14.7 5.25 14.05L6.6 11.6L3 4H1V2H4.25L5.2 4Z"
+                      fill="white"
+                    />
+                  </g>
+                </svg>
+                Beli Sekarang
+              </Link>
+            )}
           </div>
         </div>
 

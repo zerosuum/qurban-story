@@ -5,10 +5,11 @@ type ProductCardProps = {
   id: string;
   image: string;
   name: string;
-  originalPrice?: string; // harga promo
+  originalPrice?: string;
   currentPrice: string;
   weight: string;
-  quota?: { current: number; max: number }; // patungan
+  stock: number;
+  quota?: { current: number; max: number };
 };
 
 export default function ProductCard({
@@ -18,9 +19,14 @@ export default function ProductCard({
   originalPrice,
   currentPrice,
   weight,
+  stock,
   quota,
 }: ProductCardProps) {
   const progressPercentage = quota ? (quota.current / quota.max) * 100 : 0;
+
+  const isOutOfStock = stock <= 0;
+  const isGroupFull = quota && quota.current >= quota.max;
+  const isDisabled = isOutOfStock || isGroupFull;
 
   return (
     <div className="flex flex-col w-[280px] h-[464px] rounded-xl border border-neutral-200 bg-white shadow-[0_2px_4px_-2px_rgba(24,39,75,0.12),0_4px_4px_-2px_rgba(24,39,75,0.08)] overflow-hidden hover:shadow-md transition-shadow">
@@ -85,13 +91,22 @@ export default function ProductCard({
           </div>
         )}
 
-        {/* Tombol CTA */}
-        <Link
-          href={`/produk/${id}`}
-          className="flex justify-center items-center w-full h-10 px-4 py-2 mt-auto rounded-xl bg-[#044B57] text-white font-sans font-bold text-[16px] leading-[24px] hover:bg-[#033C46] active:scale-95 transition-all"
-        >
-          Lihat detail
-        </Link>
+        {/* 🔥 FIX 3: Tombol CTA (Ganti jadi abu-abu kalau habis) */}
+        {isDisabled ? (
+          <button
+            disabled
+            className="flex justify-center items-center w-full h-10 px-4 py-2 mt-auto rounded-xl bg-neutral-300 text-white font-sans font-bold text-[16px] leading-[24px] cursor-not-allowed"
+          >
+            {isOutOfStock ? "Stok Habis" : "Kuota Penuh"}
+          </button>
+        ) : (
+          <Link
+            href={`/produk/${id}`}
+            className="flex justify-center items-center w-full h-10 px-4 py-2 mt-auto rounded-xl bg-[#044B57] text-white font-sans font-bold text-[16px] leading-[24px] hover:bg-[#033C46] active:scale-95 transition-all"
+          >
+            Lihat detail
+          </Link>
+        )}
       </div>
     </div>
   );
