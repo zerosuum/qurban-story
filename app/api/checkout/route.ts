@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { snap } from "@/lib/midtrans";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { computeCheckoutGrossAmount } from "@/lib/payments/checkout-pricing";
 
 function getReadableErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
@@ -21,6 +22,10 @@ function getReadableErrorMessage(error: unknown) {
 
 export async function POST(request: Request) {
   try {
+    const now = new Date();
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -57,7 +62,15 @@ export async function POST(request: Request) {
     const product = await prisma.product.findUnique({
       where: { id: productId },
       include: {
-        promos: { where: { isActive: true } },
+        promos: {
+          where: {
+            isActive: true,
+            startDate: { lte: now },
+            OR: [{ endDate: null }, { endDate: { gte: todayStart } }],
+          },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
         species: {
           select: {
             maxParticipants: true,
@@ -73,17 +86,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const activePromo = product.promos[0];
-    let finalPrice = Number(product.price);
-    if (activePromo) {
-      if (activePromo.discountType === "NOMINAL") {
-        finalPrice -= Number(activePromo.discountValue);
-      } else if (activePromo.discountType === "PERCENTAGE") {
-        finalPrice -= (finalPrice * Number(activePromo.discountValue)) / 100;
-      }
-    }
-
-    const grossAmount = Math.max(1, Math.round(finalPrice));
+    const grossAmount = computeCheckoutGrossAmount({
+      basePrice: product.price,
+      promos: product.promos,
+      now,
+    });
 
     if (
       !process.env.MIDTRANS_SERVER_KEY ||
