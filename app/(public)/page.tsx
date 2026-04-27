@@ -6,12 +6,15 @@ import PilihanHewanCard from "@/components/ui/PilihanHewanCard";
 import { listProducts } from "@/lib/products/product.service";
 import { Suspense } from "react";
 
+export const dynamic = "force-dynamic";
+
 type PilihanHewanItem = {
     id: string;
     name: string;
     image: string;
     price: string;
     weight: string;
+    stock: number;
 };
 
 function formatRupiah(value: string | number) {
@@ -184,33 +187,35 @@ async function PilihanHewanGrid() {
             weight: product.weight
                 ? `Berat: ${product.weight}`
                 : "Berat: Tidak spesifik",
+            stock: product.stock,
         }));
     } catch (error) {
         console.error("[HOME_PRODUCTS_FETCH_ERROR]", error);
     }
 
-if (pilihanHewan.length === 0) {
-    return (
-        <p className="text-white/90 text-lg font-medium">
-            Produk belum tersedia saat ini.
-        </p>
-    );
-}
+    if (pilihanHewan.length === 0) {
+        return (
+            <p className="text-white/90 text-lg font-medium">
+                Produk belum tersedia saat ini.
+            </p>
+        );
+    }
 
-return (
-    <div className="grid w-full max-w-6xl grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {pilihanHewan.map((item) => (
-            <PilihanHewanCard
-                key={item.id}
-                image={item.image}
-                name={item.name}
-                price={item.price}
-                weight={item.weight}
-                href={`/produk/${item.id}`}
-            />
-        ))}
-    </div>
-);
+    return (
+        <div className="grid w-full max-w-6xl grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {pilihanHewan.map((item) => (
+                <PilihanHewanCard
+                    key={item.id}
+                    image={item.image}
+                    name={item.name}
+                    price={item.price}
+                    weight={item.weight}
+                    stock={item.stock}
+                    href={`/produk/${item.id}`}
+                />
+            ))}
+        </div>
+    );
 }
 
 function PilihanHewanSkeleton() {
@@ -232,4 +237,4 @@ function PilihanHewanSkeleton() {
             ))}
         </div>
     );
-  }
+}

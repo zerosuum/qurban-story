@@ -43,6 +43,16 @@ type TransactionsApiResponse = {
     };
 };
 
+type TransactionDetailApiResponse = {
+    data?: {
+        reportingDates?: {
+            tahap1Date?: string | null;
+            tahap2Date?: string | null;
+            tahap3Date?: string | null;
+        };
+    };
+};
+
 type TransactionTableProps = {
     onSummaryChange?: (summary: TransactionSummary) => void;
     mode?: "dashboard" | "transaksi";
@@ -71,6 +81,7 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
     const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false);
+    const [tahap1Date, setTahap1Date] = useState("");
     const [tahap2Date, setTahap2Date] = useState("");
     const [tahap3Date, setTahap3Date] = useState("");
     const [refreshKey, setRefreshKey] = useState(0);
@@ -195,13 +206,33 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
         });
     };
 
-    const handleUpdatePelaporan = () => {
+    const handleUpdatePelaporan = async () => {
         if (selectedCount === 0) {
             setShowSelectionWarning(true);
             return;
         }
 
         setShowSelectionWarning(false);
+        setTahap1Date("");
+        setTahap2Date("");
+        setTahap3Date("");
+
+        if (!isAllPagesSelected && selectedIds.length === 1) {
+            try {
+                const response = await fetch(`/api/transactions/${selectedIds[0]}`);
+                if (response.ok) {
+                    const detail = (await response.json()) as TransactionDetailApiResponse;
+                    const savedDates = detail.data?.reportingDates;
+
+                    setTahap1Date(savedDates?.tahap1Date ?? "");
+                    setTahap2Date(savedDates?.tahap2Date ?? "");
+                    setTahap3Date(savedDates?.tahap3Date ?? "");
+                }
+            } catch {
+                // Keep fields empty if prefill fetch fails.
+            }
+        }
+
         setIsProgressModalOpen(true);
     };
 
@@ -227,6 +258,7 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
                         paymentStatus: paymentFilter,
                         reportingStatus: reportFilter,
                     },
+                    tahap1Date,
                     tahap2Date,
                     tahap3Date,
                 }),
@@ -241,6 +273,7 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
             setIsConfirmOpen(false);
             setSelectedIds([]);
             setIsAllPagesSelected(false);
+            setTahap1Date("");
             setTahap2Date("");
             setTahap3Date("");
             setFetchError(null);
@@ -454,8 +487,10 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
             <UpdatePelaporanModal
                 isOpen={isTransaksiMode && isProgressModalOpen}
                 selectedCount={selectedCount}
+                tahap1Date={tahap1Date}
                 tahap2Date={tahap2Date}
                 tahap3Date={tahap3Date}
+                onChangeTahap1Date={setTahap1Date}
                 onChangeTahap2Date={setTahap2Date}
                 onChangeTahap3Date={setTahap3Date}
                 onClose={() => setIsProgressModalOpen(false)}

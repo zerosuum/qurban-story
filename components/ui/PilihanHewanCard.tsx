@@ -7,10 +7,13 @@ type PilihanHewanCardProps = {
     name: string;
     price: string;
     weight: string;
+    stock: number;
     href?: string;
 };
 
-export default function PilihanHewanCard({ image, name, price, weight, href }: PilihanHewanCardProps) {
+export default function PilihanHewanCard({ image, name, price, weight, stock, href }: PilihanHewanCardProps) {
+    const isOutOfStock = stock <= 0;
+
     return (
         <div className="w-full max-w-70 rounded-lg bg-white p-6 shadow-md">
             <div className="relative mx-auto aspect-square w-full max-w-58 overflow-hidden rounded-lg bg-neutral-100">
@@ -21,11 +24,24 @@ export default function PilihanHewanCard({ image, name, price, weight, href }: P
                 <p className="text-primary-600 text-lg font-bold">{price}</p>
                 <p className="text-primary-900 text-[16px]">{weight}</p>
             </div>
-            <Link href={href || "#"} className="mt-4 block w-full">
-                <Button variant="primary" className="w-full">
-                    Lihat Detail
-                </Button>
-            </Link>
+            {isOutOfStock ? (
+                <div className="mt-4 block w-full">
+                    <Button
+                        variant="primary"
+                        className="w-full cursor-not-allowed opacity-50"
+                        disabled
+                        aria-disabled="true"
+                    >
+                        Stok Habis
+                    </Button>
+                </div>
+            ) : (
+                <Link href={href || "#"} className="mt-4 block w-full">
+                    <Button variant="primary" className="w-full">
+                        Lihat Detail
+                    </Button>
+                </Link>
+            )}
         </div>
     );
 }

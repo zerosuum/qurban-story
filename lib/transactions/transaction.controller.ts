@@ -161,6 +161,7 @@ export async function handleBulkUpdateReportingStatus(request: Request) {
                 paymentStatus?: "BERHASIL" | "GAGAL" | "KADALUARSA" | "TERTUNDA" | "Semua Pembayaran";
                 reportingStatus?: "Tahap 1/3" | "Tahap 2/3" | "Selesai" | "Belum Dimulai" | "Semua Pelaporan";
             };
+            tahap1Date?: string;
             tahap2Date?: string;
             tahap3Date?: string;
         };
@@ -177,6 +178,7 @@ export async function handleBulkUpdateReportingStatus(request: Request) {
                 paymentStatus: body.filters?.paymentStatus,
                 reportingStatus: body.filters?.reportingStatus,
             },
+            tahap1Date: body.tahap1Date,
             tahap2Date: body.tahap2Date,
             tahap3Date: body.tahap3Date,
         });
@@ -189,6 +191,10 @@ export async function handleBulkUpdateReportingStatus(request: Request) {
         }
 
         if (message.includes("Pilih minimal")) {
+            return NextResponse.json({ message }, { status: 400 });
+        }
+
+        if (message.includes("tidak bisa diperbarui pelaporannya")) {
             return NextResponse.json({ message }, { status: 400 });
         }
 

@@ -1,8 +1,10 @@
 type UpdatePelaporanModalProps = {
     isOpen: boolean;
     selectedCount: number;
+    tahap1Date: string;
     tahap2Date: string;
     tahap3Date: string;
+    onChangeTahap1Date: (value: string) => void;
     onChangeTahap2Date: (value: string) => void;
     onChangeTahap3Date: (value: string) => void;
     onClose: () => void;
@@ -43,8 +45,10 @@ function DateField({ value, onChange, placeholder, readOnly = false }: DateField
 export default function UpdatePelaporanModal({
     isOpen,
     selectedCount,
+    tahap1Date,
     tahap2Date,
     tahap3Date,
+    onChangeTahap1Date,
     onChangeTahap2Date,
     onChangeTahap3Date,
     onClose,
@@ -74,7 +78,11 @@ export default function UpdatePelaporanModal({
                         <div>
                             <p className=" font-medium text-neutral-900">Tahap 1: Disembelih</p>
                             <p className="mt-1 text-sm text-neutral-700">Hewan qurban telah disembelih sesuai syariat Islam.</p>
-                            <DateField value="27/05/2026" readOnly />
+                            <DateField
+                                value={tahap1Date}
+                                onChange={onChangeTahap1Date}
+                                placeholder="dd/mm/yyyy"
+                            />
                         </div>
                     </div>
 
