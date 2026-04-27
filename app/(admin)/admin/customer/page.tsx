@@ -2,12 +2,7 @@
 
 import { useEffect, useState } from "react";
 import SearchBar from "@/components/ui/SearchBar";
-import FilterPembayaran from "@/components/ui/FilterPembayaran";
-import FilterPelaporan from "@/components/ui/FilterPelaporan";
 import CustomerDetailModal, { CustomerDetailData } from "@/components/ui/CustomerDetailModal";
-
-type PaymentStatus = "BERHASIL" | "GAGAL" | "KADALUARSA" | "TERTUNDA";
-type ReportingStatus = "Tahap 1/3" | "Tahap 2/3" | "Selesai" | "Belum Dimulai";
 
 type CustomerRow = {
     id: string;
@@ -39,8 +34,6 @@ type CustomerDetailApiResponse = {
 export default function CustomerPage() {
     const [rows, setRows] = useState<CustomerRow[]>([]);
     const [search, setSearch] = useState("");
-    const [paymentFilter, setPaymentFilter] = useState<PaymentStatus | "Semua Pembayaran">("Semua Pembayaran");
-    const [reportFilter, setReportFilter] = useState<ReportingStatus | "Semua Pelaporan">("Semua Pelaporan");
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
@@ -65,14 +58,6 @@ export default function CustomerPage() {
 
                 if (search.trim()) {
                     query.set("search", search.trim());
-                }
-
-                if (paymentFilter !== "Semua Pembayaran") {
-                    query.set("payment", paymentFilter);
-                }
-
-                if (reportFilter !== "Semua Pelaporan") {
-                    query.set("report", reportFilter);
                 }
 
                 const response = await fetch(`/api/customers?${query.toString()}`, {
@@ -104,7 +89,7 @@ export default function CustomerPage() {
         void fetchCustomers();
 
         return () => controller.abort();
-    }, [page, paymentFilter, reportFilter, search]);
+    }, [page, search]);
 
     const paginatedCustomers = rows;
 
@@ -143,16 +128,6 @@ export default function CustomerPage() {
         setPage(1);
     };
 
-    const handlePaymentChange = (value: string) => {
-        setPaymentFilter(value as PaymentStatus | "Semua Pembayaran");
-        setPage(1);
-    };
-
-    const handleReportChange = (value: string) => {
-        setReportFilter(value as ReportingStatus | "Semua Pelaporan");
-        setPage(1);
-    };
-
     return (
         <main className="p-6">
             <div className="rounded-xl border border-neutral-100 bg-white p-5">
@@ -163,8 +138,6 @@ export default function CustomerPage() {
 
                 <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center">
                     <SearchBar value={search} onChange={handleSearchChange} className="md:flex-1" />
-                    <FilterPembayaran value={paymentFilter} onChange={handlePaymentChange} />
-                    <FilterPelaporan value={reportFilter} onChange={handleReportChange} />
                 </div>
 
                 <div className="overflow-x-auto rounded-xl border border-neutral-100">

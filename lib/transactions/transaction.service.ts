@@ -55,6 +55,11 @@ export type TransactionDetail = {
   paymentMethod: string | null;
   pembayaran: PaymentStatusUi;
   pelaporan: ReportingStatusUi;
+  reportingDates: {
+    tahap1Date: string | null;
+    tahap2Date: string | null;
+    tahap3Date: string | null;
+  };
   documentation: {
     photoUrls: string[];
     videoUrl: string | null;
@@ -68,6 +73,7 @@ type BulkUpdateReportingInput = {
     TransactionQuery,
     "search" | "paymentStatus" | "reportingStatus"
   >;
+  tahap1Date?: string;
   tahap2Date?: string;
   tahap3Date?: string;
 };
@@ -400,6 +406,42 @@ function formatDate(date: Date) {
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
   const year = date.getFullYear();
   return `${day}-${month}-${year}`;
+}
+
+function formatDateInput(date: Date) {
+  const day = `${date.getDate()}`.padStart(2, "0");
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+function extractReportingDates(
+  reports: Array<{ stage: string; executionDate: Date | null }>,
+) {
+  const byStage = new Map<string, Date>();
+
+  for (const report of reports) {
+    if (!report.executionDate) {
+      continue;
+    }
+
+    const current = byStage.get(report.stage);
+    if (!current || report.executionDate.getTime() > current.getTime()) {
+      byStage.set(report.stage, report.executionDate);
+    }
+  }
+
+  return {
+    tahap1Date: byStage.get("STAGE_1")
+      ? formatDateInput(byStage.get("STAGE_1") as Date)
+      : null,
+    tahap2Date: byStage.get("STAGE_2")
+      ? formatDateInput(byStage.get("STAGE_2") as Date)
+      : null,
+    tahap3Date: byStage.get("STAGE_3")
+      ? formatDateInput(byStage.get("STAGE_3") as Date)
+      : null,
+  };
 }
 
 function parseDateInput(value?: string): Date | null {
@@ -759,6 +801,11 @@ export async function getTransactionById(
       createdAt: new Date().toISOString(),
       snapToken: null,
       paymentMethod: null,
+      reportingDates: {
+        tahap1Date: null,
+        tahap2Date: null,
+        tahap3Date: null,
+      },
       documentation: {
         photoUrls: [],
         videoUrl: null,
@@ -794,6 +841,7 @@ export async function getTransactionById(
       reports: {
         select: {
           stage: true,
+          executionDate: true,
         },
       },
       docs: {
@@ -811,6 +859,7 @@ export async function getTransactionById(
           reports: {
             select: {
               stage: true,
+              executionDate: true,
             },
           },
           docs: {
@@ -847,6 +896,11 @@ export async function getTransactionById(
   const videoUrl =
     combinedDocs.find((doc) => doc.mediaType === "VIDEO")?.mediaUrl ?? null;
 
+  const effectiveReportsWithDate =
+    order.group?.reports && order.group.reports.length > 0
+      ? order.group.reports
+      : order.reports;
+
   return {
     id: order.id,
     invoice:
@@ -863,6 +917,7 @@ export async function getTransactionById(
     pelaporan: mapReportsToUiStatus(
       getEffectiveReports(order.reports, order.group?.reports),
     ),
+    reportingDates: extractReportingDates(effectiveReportsWithDate),
     documentation: {
       photoUrls,
       videoUrl,
@@ -1083,10 +1138,11 @@ export async function bulkUpdateReportingStatus(
     const orders = await prisma.order.findMany({
       where: buildOrderWhereInput({
         search: filters.search,
-        paymentStatus: filters.paymentStatus,
+        paymentStatus: undefined,
       }),
       select: {
         id: true,
+        status: true,
         animalGroupId: true,
         reports: {
           select: {
@@ -1107,6 +1163,19 @@ export async function bulkUpdateReportingStatus(
 
     uniqueOrderIds = orders
       .filter((order) => {
+        if (order.status === "FAILED" || order.status === "EXPIRED") {
+          return false;
+        }
+
+        const matchesPayment =
+          !filters.paymentStatus ||
+          filters.paymentStatus === "Semua Pembayaran" ||
+          mapOrderStatusToUi(order.status) === filters.paymentStatus;
+
+        if (!matchesPayment) {
+          return false;
+        }
+
         if (
           !filters.reportingStatus ||
           filters.reportingStatus === "Semua Pelaporan"
@@ -1131,6 +1200,7 @@ export async function bulkUpdateReportingStatus(
     throw new Error("Pilih minimal 1 transaksi.");
   }
 
+  const parsedTahap1Date = parseDateInput(input.tahap1Date);
   const parsedTahap2Date = parseDateInput(input.tahap2Date);
   const parsedTahap3Date = parseDateInput(input.tahap3Date);
 
@@ -1143,7 +1213,7 @@ export async function bulkUpdateReportingStatus(
   const now = new Date();
 
   const stagesToApply: Array<{ stage: ReportStage; executionDate: Date }> = [
-    { stage: "STAGE_1", executionDate: now },
+    { stage: "STAGE_1", executionDate: parsedTahap1Date ?? now },
   ];
 
   if (targetStage === "STAGE_2" || targetStage === "STAGE_3") {
@@ -1169,6 +1239,7 @@ export async function bulkUpdateReportingStatus(
       },
       select: {
         id: true,
+        status: true,
         animalGroupId: true,
       },
     });
@@ -1177,12 +1248,22 @@ export async function bulkUpdateReportingStatus(
       throw new Error("Sebagian transaksi tidak ditemukan.");
     }
 
+    const eligibleOrders = existingOrders.filter(
+      (order) => order.status !== "FAILED" && order.status !== "EXPIRED",
+    );
+
+    if (eligibleOrders.length === 0) {
+      throw new Error(
+        "Transaksi gagal atau kadaluarsa tidak bisa diperbarui pelaporannya.",
+      );
+    }
+
     const groupIds = Array.from(
       new Set(
-        existingOrders.map((order) => order.animalGroupId).filter(Boolean),
+        eligibleOrders.map((order) => order.animalGroupId).filter(Boolean),
       ),
     ) as string[];
-    const standaloneOrderIds = existingOrders
+    const standaloneOrderIds = eligibleOrders
       .filter((order) => !order.animalGroupId)
       .map((order) => order.id);
 
@@ -1226,7 +1307,7 @@ export async function bulkUpdateReportingStatus(
     });
 
     return {
-      updatedOrders: uniqueOrderIds.length,
+      updatedOrders: eligibleOrders.length,
       targetStage,
     };
   });

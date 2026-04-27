@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import StatusPembayaranBadge from "@/components/ui/StatusPembayaranBadge";
 import StatusPelaporanBadge from "@/components/ui/StatusPelaporanBadge";
+import StatusAlert from "@/components/ui/StatusAlert";
 
 type DetailResponse = {
     data: {
@@ -15,6 +16,11 @@ type DetailResponse = {
         nominal: string;
         pembayaran: "BERHASIL" | "GAGAL" | "KADALUARSA" | "TERTUNDA";
         pelaporan: "Tahap 1/3" | "Tahap 2/3" | "Selesai" | "Belum Dimulai";
+        reportingDates: {
+            tahap1Date: string | null;
+            tahap2Date: string | null;
+            tahap3Date: string | null;
+        };
         documentation: {
             photoUrls: string[];
             videoUrl: string | null;
@@ -55,6 +61,7 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [tahap1Date, setTahap1Date] = useState("");
     const [tahap2Date, setTahap2Date] = useState("");
     const [tahap3Date, setTahap3Date] = useState("");
     const [existingPhotoUrls, setExistingPhotoUrls] = useState<string[]>([]);
@@ -63,7 +70,29 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
     const [distributionVideoFile, setDistributionVideoFile] = useState<File | null>(null);
     const [distributionReportFile, setDistributionReportFile] = useState<File | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [alertState, setAlertState] = useState<{
+        isOpen: boolean;
+        type: "success" | "error";
+        title: string;
+        message: string;
+    }>({
+        isOpen: false,
+        type: "success",
+        title: "",
+        message: "",
+    });
+
+    useEffect(() => {
+        if (!alertState.isOpen) {
+            return;
+        }
+
+        const timer = window.setTimeout(() => {
+            setAlertState((prev) => ({ ...prev, isOpen: false }));
+        }, 3200);
+
+        return () => window.clearTimeout(timer);
+    }, [alertState.isOpen]);
 
     const slaughterPreviews = useMemo(() => {
         return slaughterFiles.map((file) => ({
@@ -116,6 +145,9 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                 const result = (await response.json()) as DetailResponse;
                 if (!mounted) return;
                 setDetail(result.data);
+                setTahap1Date(result.data.reportingDates?.tahap1Date ?? "");
+                setTahap2Date(result.data.reportingDates?.tahap2Date ?? "");
+                setTahap3Date(result.data.reportingDates?.tahap3Date ?? "");
                 setExistingPhotoUrls(result.data.documentation.photoUrls ?? []);
                 setExistingVideoUrl(result.data.documentation.videoUrl ?? null);
             } catch (error) {
@@ -236,10 +268,10 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
 
         setIsSaving(true);
         setErrorMessage(null);
-        setSuccessMessage(null);
+        setAlertState((prev) => ({ ...prev, isOpen: false }));
 
         try {
-            if (tahap2Date || tahap3Date) {
+            if (tahap1Date || tahap2Date || tahap3Date) {
                 const reportingResponse = await fetch("/api/transactions", {
                     method: "PATCH",
                     headers: {
@@ -247,6 +279,7 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                     },
                     body: JSON.stringify({
                         orderIds: [detail.id],
+                        tahap1Date,
                         tahap2Date,
                         tahap3Date,
                     }),
@@ -311,19 +344,35 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
             setSlaughterFiles([]);
             setDistributionVideoFile(null);
             setDistributionReportFile(null);
+            setTahap1Date("");
             setTahap2Date("");
             setTahap3Date("");
-            setSuccessMessage("Perubahan berhasil disimpan dan dokumentasi berhasil didistribusikan.");
 
             const refreshed = await fetch(`/api/transactions/${detail.id}`);
             if (refreshed.ok) {
                 const refreshedResult = (await refreshed.json()) as DetailResponse;
                 setDetail(refreshedResult.data);
+                setTahap1Date(refreshedResult.data.reportingDates?.tahap1Date ?? "");
+                setTahap2Date(refreshedResult.data.reportingDates?.tahap2Date ?? "");
+                setTahap3Date(refreshedResult.data.reportingDates?.tahap3Date ?? "");
                 setExistingPhotoUrls(refreshedResult.data.documentation.photoUrls ?? []);
                 setExistingVideoUrl(refreshedResult.data.documentation.videoUrl ?? null);
             }
+
+            setAlertState({
+                isOpen: true,
+                type: "success",
+                title: "Berhasil",
+                message: "Perubahan pelaporan dan dokumentasi berhasil disimpan.",
+            });
         } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : "Gagal menyimpan perubahan.");
+            const message = error instanceof Error ? error.message : "Gagal menyimpan perubahan.";
+            setAlertState({
+                isOpen: true,
+                type: "error",
+                title: "Gagal",
+                message,
+            });
         } finally {
             setIsSaving(false);
         }
@@ -346,8 +395,10 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                                 return;
                             }
 
-                            setSuccessMessage(null);
                             setErrorMessage(null);
+                            setTahap1Date(detail?.reportingDates?.tahap1Date ?? "");
+                            setTahap2Date(detail?.reportingDates?.tahap2Date ?? "");
+                            setTahap3Date(detail?.reportingDates?.tahap3Date ?? "");
                             setExistingPhotoUrls(detail?.documentation.photoUrls ?? []);
                             setExistingVideoUrl(detail?.documentation.videoUrl ?? null);
                             setSlaughterFiles([]);
@@ -364,7 +415,6 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                 <section className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
                     {isLoading && <p className="text-neutral-500">Memuat detail transaksi...</p>}
                     {!isLoading && errorMessage && <p className="text-red-500">{errorMessage}</p>}
-                    {!isLoading && successMessage && <p className="text-green-600">{successMessage}</p>}
 
                     {!isLoading && detail && (
                         <div className="flex flex-col gap-4">
@@ -413,7 +463,17 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                             <div>
                                 <p className="text-2xl font-bold text-neutral-900">Tahap 1: Disembelih</p>
                                 <p className="mt-1 text-sm text-neutral-700">Hewan qurban telah disembelih sesuai syariat Islam.</p>
-                                <p className="mt-1 text-sm text-neutral-700">27 Mei 2025 08.30 WIB</p>
+                                {isEditMode ? (
+                                    <input
+                                        type="text"
+                                        value={tahap1Date}
+                                        onChange={(event) => setTahap1Date(event.target.value)}
+                                        placeholder="dd/mm/yyyy"
+                                        className="mt-2 h-10 w-35 rounded-xl border border-neutral-200 px-3 text-sm text-neutral-600 outline-none focus:border-primary-500"
+                                    />
+                                ) : (
+                                    <p className="mt-1 text-sm text-neutral-700">{detail?.reportingDates?.tahap1Date ?? "-"}</p>
+                                )}
                             </div>
                         </div>
 
@@ -431,7 +491,7 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                                         className="mt-2 h-10 w-35 rounded-xl border border-neutral-200 px-3 text-sm text-neutral-600 outline-none focus:border-primary-500"
                                     />
                                 ) : (
-                                    <p className="mt-1 text-sm text-neutral-700">-</p>
+                                    <p className="mt-1 text-sm text-neutral-700">{detail?.reportingDates?.tahap2Date ?? "-"}</p>
                                 )}
                             </div>
                         </div>
@@ -451,7 +511,7 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                                         className="mt-2 h-10 w-35 rounded-xl border border-neutral-200 px-3 text-sm text-neutral-600 outline-none focus:border-primary-500"
                                     />
                                 ) : (
-                                    <p className="mt-1 text-sm text-neutral-700">-</p>
+                                    <p className="mt-1 text-sm text-neutral-700">{detail?.reportingDates?.tahap3Date ?? "-"}</p>
                                 )}
                             </div>
                         </div>
@@ -644,6 +704,13 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                         </div>
                     )}
                 </section>
+
+                <StatusAlert
+                    isOpen={alertState.isOpen}
+                    type={alertState.type}
+                    title={alertState.title}
+                    message={alertState.message}
+                />
             </div>
         </main>
     );
