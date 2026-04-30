@@ -231,11 +231,26 @@ async function syncPendingOrderFromMidtrans(orderId: string): Promise<boolean> {
       status: true,
       totalPrice: true,
       productId: true,
+      createdAt: true,
     },
   });
 
   if (!existingOrder || existingOrder.status !== "PAYMENT_PENDING") {
     return false;
+  }
+
+  const now = new Date().getTime();
+  const orderTime = existingOrder.createdAt.getTime();
+  const isExpiredLocally = now - orderTime >= 24 * 60 * 60 * 1000;
+
+  if (isExpiredLocally) {
+
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { status: "EXPIRED" },
+    });
+    console.log("[LOCAL_EXPIRE_SYNC]", { orderId, reason: "24_hours_passed" });
+    return true;
   }
 
   let statusResponse: MidtransStatusResponse;
@@ -955,6 +970,12 @@ export async function regenerateTransactionPaymentToken(
 
   if (order.status === "PAID") {
     throw new Error("Transaksi sudah lunas dan tidak bisa dibayar ulang.");
+  }
+
+  if (order.status === "EXPIRED") {
+    throw new Error(
+      "Waktu pembayaran telah habis. Silakan buat transaksi pesanan baru.",
+    );
   }
 
   if (!process.env.MIDTRANS_SERVER_KEY || !process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY) {

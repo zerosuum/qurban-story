@@ -112,8 +112,11 @@ export default function RiwayatTransaksiPage() {
         });
 
         if (search) query.append("search", search);
-        if (paymentFilter !== "Semua Pembayaran")
-          query.append("payment", paymentFilter);
+        if (paymentFilter !== "Semua Pembayaran") {
+          const mappedPayment =
+            paymentFilter === "MENUNGGU PEMBAYARAN" ? "TERTUNDA" : paymentFilter;
+          query.append("payment", mappedPayment);
+        }
         if (reportFilter !== "Semua Pelaporan")
           query.append("report", reportFilter);
 
@@ -190,7 +193,7 @@ export default function RiwayatTransaksiPage() {
                 "MENUNGGU PEMBAYARAN",
                 "KADALUARSA",
                 "GAGAL",
-                "TERTUNDA",
+                // "TERTUNDA",
               ]}
               onChange={(v) => handleFilterChange(setPaymentFilter, v)}
             />
