@@ -174,21 +174,27 @@ async function PilihanHewanGrid() {
             }
         }
 
-        pilihanHewan = allProducts.map((product) => ({
-            id: product.id,
-            name: product.name,
-            image:
-                product.images.find(
-                    (img: { isPrimary: boolean; imageUrl: string }) => img.isPrimary,
-                )?.imageUrl ||
-                product.images[0]?.imageUrl ||
-                "/hewan/sapi.png",
-            price: formatRupiah(product.promoPrice || product.price),
-            weight: product.weight
-                ? `Berat: ${product.weight}`
-                : "Berat: Tidak spesifik",
-            stock: product.stock,
-        }));
+        pilihanHewan = allProducts
+            .map((product) => ({
+                id: product.id,
+                name: product.name,
+                image:
+                    product.images.find(
+                        (img: { isPrimary: boolean; imageUrl: string }) => img.isPrimary,
+                    )?.imageUrl ||
+                    product.images[0]?.imageUrl ||
+                    "/hewan/sapi.png",
+                price: formatRupiah(product.promoPrice || product.price),
+                weight: product.weight
+                    ? `Berat: ${product.weight}`
+                    : "Berat: Tidak spesifik",
+                stock: product.stock,
+            }))
+            .sort((a, b) => {
+                const aHasStock = a.stock > 0 ? 1 : 0;
+                const bHasStock = b.stock > 0 ? 1 : 0;
+                return bHasStock - aHasStock;
+            });
     } catch (error) {
         console.error("[HOME_PRODUCTS_FETCH_ERROR]", error);
     }
