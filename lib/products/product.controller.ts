@@ -96,22 +96,38 @@ async function storeUploadedImages(files: File[]) {
   }
 
   const uploadDir = path.join(process.cwd(), "public", "hewan");
-  await mkdir(uploadDir, { recursive: true });
+  try {
+    await mkdir(uploadDir, { recursive: true });
 
-  const imageUrls: string[] = [];
+    const imageUrls: string[] = [];
 
-  for (const file of files) {
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const safeName = sanitizeFilename(file.name || "image.jpg");
-    const filename = `${Date.now()}-${crypto.randomUUID()}-${safeName}`;
-    const destination = path.join(uploadDir, filename);
+    for (const file of files) {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const safeName = sanitizeFilename(file.name || "image.jpg");
+      const filename = `${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+      const destination = path.join(uploadDir, filename);
 
-    await writeFile(destination, buffer);
-    imageUrls.push(`/hewan/${filename}`);
+      await writeFile(destination, buffer);
+      imageUrls.push(`/hewan/${filename}`);
+    }
+
+    return imageUrls;
+  } catch (error) {
+    const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined;
+
+    if (code === "EROFS" || code === "EACCES" || code === "EPERM") {
+      console.warn("[PRODUCT_IMAGE_UPLOAD_SKIPPED]", {
+        reason: code,
+        uploadDir,
+        fileCount: files.length,
+      });
+
+      return [];
+    }
+
+    throw error;
   }
-
-  return imageUrls;
 }
 
 function normalizeCreatePayload(body: unknown) {
