@@ -278,6 +278,7 @@ export async function handleCreateProduct(request: Request) {
       { status: 201 }
     );
   } catch (error) {
+    console.error("[CREATE_PRODUCT_ERROR]", error);
     const message = error instanceof Error ? error.message : "Gagal menambahkan produk.";
     return NextResponse.json({ message }, { status: 400 });
   }

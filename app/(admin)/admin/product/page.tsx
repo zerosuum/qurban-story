@@ -32,13 +32,13 @@ export default function ProductPage() {
         return () => window.clearTimeout(timer);
     }, [submitAlert]);
 
-    const handleSubmitResult = (status: "success" | "error") => {
+    const handleSubmitResult = (status: "success" | "error", message?: string) => {
         if (status === "success") {
             setProductTableRefreshKey((prev) => prev + 1);
             setSubmitAlert({
                 type: "success",
                 title: "Berhasil!",
-                message: "Produk baru berhasil ditambahkan.",
+                message: message ?? "Produk baru berhasil ditambahkan.",
             });
             return;
         }
@@ -46,7 +46,7 @@ export default function ProductPage() {
         setSubmitAlert({
             type: "error",
             title: "Terjadi Kesalahan.",
-            message: "Produk baru tidak dapat ditambahkan.",
+            message: message ?? "Produk baru tidak dapat ditambahkan.",
         });
     };
 
@@ -79,7 +79,18 @@ export default function ProductPage() {
         });
 
         if (!response.ok) {
-            throw new Error("Gagal menambahkan produk");
+            let message = "Gagal menambahkan produk";
+
+            try {
+                const result = (await response.json()) as { message?: string };
+                if (result.message) {
+                    message = result.message;
+                }
+            } catch {
+                // Keep the generic message when the response body is not valid JSON.
+            }
+
+            throw new Error(message);
         }
     };
 

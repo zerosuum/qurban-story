@@ -26,7 +26,7 @@ type TambahProdukModalProps = {
     formData: TambahProdukForm,
     imageFiles: File[],
   ) => Promise<void> | void;
-  onSubmitResult?: (status: "success" | "error") => void;
+  onSubmitResult?: (status: "success" | "error", message?: string) => void;
 };
 
 const initialForm: TambahProdukForm = {
@@ -170,10 +170,11 @@ export default function TambahProdukModal({
         );
       }
 
-      onSubmitResult?.("success");
+      onSubmitResult?.("success", "Produk baru berhasil ditambahkan.");
       handleCancel();
-    } catch {
-      onSubmitResult?.("error");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Gagal menambahkan produk.";
+      onSubmitResult?.("error", message);
       setIsConfirmOpen(false);
       setIsSubmitting(false);
     }
