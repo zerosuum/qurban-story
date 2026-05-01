@@ -11,12 +11,12 @@ export default function CancelModal({ isOpen, onClose }: CancelModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-800/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-800/50 backdrop-blur-sm px-4">
       {/* Modal Container */}
       <div
         className="
           flex flex-col items-end gap-4 
-          w-[480px] p-6 px-8 
+          w-full max-w-[480px] p-5 sm:p-6 sm:px-8 
           bg-white border border-neutral-100 rounded-xl
           shadow-[0_8px_28px_-6px_rgba(24,39,75,0.12),0_18px_88px_-4px_rgba(24,39,75,0.14)]
           relative
@@ -25,7 +25,7 @@ export default function CancelModal({ isOpen, onClose }: CancelModalProps) {
         {/* Tombol X (Close) */}
         <button
           onClick={onClose}
-          className="w-6 h-6 flex-shrink-0 hover:opacity-70 transition absolute top-6 right-8"
+          className="w-6 h-6 flex-shrink-0 hover:opacity-70 transition absolute top-5 right-5 sm:top-6 sm:right-8"
           aria-label="Tutup"
         >
           <svg
@@ -56,30 +56,30 @@ export default function CancelModal({ isOpen, onClose }: CancelModalProps) {
         </button>
 
         {/* Konten Teks Container */}
-        <div className="flex flex-col items-start self-stretch gap-4 mt-8 w-full">
+        <div className="flex flex-col items-start self-stretch gap-3 sm:gap-4 mt-6 sm:mt-8 w-full">
           {/* Judul Konfirmasi */}
           <h2 className="font-sans font-bold text-[16px] leading-[20px] text-neutral-900 w-full">
             Konfirmasi
           </h2>
           {/* Teks Peringatan */}
-          <p className="font-sans font-normal text-[16px] leading-[24px] text-neutral-900 w-full">
+          <p className="font-sans font-normal text-[14px] sm:text-[16px] leading-[22px] sm:leading-[24px] text-neutral-900 w-full">
             Apakah Anda yakin ingin membatalkan transaksi?
           </p>
         </div>
 
         {/* Action Buttons Container */}
-        <div className="flex justify-end items-center gap-4 w-full mt-2">
+        <div className="flex flex-col-reverse sm:flex-row justify-end items-stretch sm:items-center gap-3 sm:gap-4 w-full mt-4 sm:mt-2">
           {/* Tombol Tutup (Batal) Modal */}
           <button
             onClick={onClose}
-            className="flex justify-center items-center h-10 px-4 py-2 gap-2.5 rounded-xl border border-primary-500 text-primary-600 font-sans font-bold text-[16px] leading-[24px] hover:bg-neutral-50 hover:text-primary-700 active:scale-95 transition-all duration-200 flex-1"
+            className="flex justify-center items-center h-10 px-4 py-2 gap-2.5 rounded-xl border border-primary-500 text-primary-600 font-sans font-bold text-[14px] sm:text-[16px] leading-[24px] hover:bg-neutral-50 hover:text-primary-700 active:scale-95 transition-all duration-200 flex-1"
           >
             Kembali
           </button>
           {/* Tombol Eksekusi: Ya, Batalkan (Redirect ke Produk) */}
           <Link
             href="/produk"
-            className="flex justify-center items-center h-10 px-4 py-2 gap-2.5 rounded-xl bg-primary-500 text-white font-sans font-bold text-[16px] leading-[24px] hover:bg-primary-600 hover:shadow-md active:scale-95 transition-all duration-200 flex-1"
+            className="flex justify-center items-center h-10 px-4 py-2 gap-2.5 rounded-xl bg-primary-500 text-white font-sans font-bold text-[14px] sm:text-[16px] leading-[24px] hover:bg-primary-600 hover:shadow-md active:scale-95 transition-all duration-200 flex-1"
           >
             Ya, Batalkan
           </Link>

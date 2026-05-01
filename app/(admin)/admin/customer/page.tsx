@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import SearchBar from "@/components/ui/SearchBar";
 import CustomerDetailModal, { CustomerDetailData } from "@/components/ui/CustomerDetailModal";
 
+type PaymentStatus = "BERHASIL" | "GAGAL" | "KADALUARSA" | "TERTUNDA";
+type ReportingStatus = "Tahap 1/3" | "Tahap 2/3" | "Selesai" | "Belum Dimulai";
+
 type CustomerRow = {
     id: string;
     name: string;
