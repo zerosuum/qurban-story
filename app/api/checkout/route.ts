@@ -187,18 +187,18 @@ export async function POST(request: Request) {
         });
       }
 
-      if (
-        participants &&
-        Array.isArray(participants) &&
-        participants.length > 0
-      ) {
-        await tx.orderParticipant.createMany({
-          data: participants.map((name: string) => ({
-            orderId: newOrder.id,
-            participantName: name,
-          })),
-        });
-      }
+      // if (
+      //   participants &&
+      //   Array.isArray(participants) &&
+      //   participants.length > 0
+      // ) {
+      //   await tx.orderParticipant.createMany({
+      //     data: participants.map((name: string) => ({
+      //       orderId: newOrder.id,
+      //       participantName: name,
+      //     })),
+      //   });
+      // }
 
       return newOrder;
     });
