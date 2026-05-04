@@ -146,17 +146,22 @@ export async function POST(request: Request) {
         targetGroupId = openGroup.id;
       }
 
-      const newOrder = await tx.order.create({
-        data: {
-          userId: session.user.id,
-          productId: product.id,
-          animalGroupId: targetGroupId,
-          donorName,
-          donorPhone,
-          totalPrice: grossAmount,
-          status: "PAYMENT_PENDING",
+    const newOrder = await tx.order.create({
+      data: {
+        userId: session.user.id,
+        productId: product.id,
+        animalGroupId: targetGroupId,
+        donorName,
+        donorPhone,
+        totalPrice: grossAmount,
+        status: "PAYMENT_PENDING",
+        participants: {
+          create: (participants || []).map((name: string) => ({
+            participantName: name,
+          })),
         },
-      });
+      },
+    });
 
       if (targetGroupId) {
         const groupState = await tx.animalGroup.findUnique({

@@ -49,6 +49,7 @@ export type TransactionDetail = {
   customer: string;
   participants: string[];
   produk: string;
+  namaBerqurban?: string;
   tanggal: string;
   createdAt: string;
   nominal: string;
@@ -245,7 +246,6 @@ async function syncPendingOrderFromMidtrans(orderId: string): Promise<boolean> {
   const isExpiredLocally = now - orderTime >= 24 * 60 * 60 * 1000;
 
   if (isExpiredLocally) {
-
     await prisma.order.update({
       where: { id: orderId },
       data: { status: "EXPIRED" },
@@ -381,16 +381,16 @@ function buildOrderWhereInput(
     ...(paymentStatusFilter ? { status: paymentStatusFilter } : {}),
     ...(keyword
       ? {
-        OR: [
-          { donorName: { contains: keyword, mode: "insensitive" } },
-          { product: { name: { contains: keyword, mode: "insensitive" } } },
-          {
-            invoice: {
-              invoiceNumber: { contains: keyword, mode: "insensitive" },
+          OR: [
+            { donorName: { contains: keyword, mode: "insensitive" } },
+            { product: { name: { contains: keyword, mode: "insensitive" } } },
+            {
+              invoice: {
+                invoiceNumber: { contains: keyword, mode: "insensitive" },
+              },
             },
-          },
-        ],
-      }
+          ],
+        }
       : {}),
   };
 }
@@ -840,14 +840,14 @@ export async function getTransactionById(
       totalPrice: true,
       status: true,
       createdAt: true,
-      payment: {
-        select: {
-          paymentType: true,
-        },
-      },
       participants: {
         select: {
           participantName: true,
+        },
+      },
+      payment: {
+        select: {
+          paymentType: true,
         },
       },
       product: {
@@ -923,6 +923,11 @@ export async function getTransactionById(
       ? order.group.reports
       : order.reports;
 
+  const namaBerqurban =
+    order.participants && order.participants.length > 0
+      ? order.participants.map((p) => p.participantName).join(", ")
+      : order.donorName;
+
   return {
     id: order.id,
     invoice:
@@ -930,6 +935,7 @@ export async function getTransactionById(
       `ORD-${order.id.slice(0, 8).toUpperCase()}`,
     customer: order.donorName,
     participants: order.participants.map((item) => item.participantName),
+    namaBerqurban,
     produk: order.product.name,
     tanggal: formatDate(order.createdAt),
     createdAt: order.createdAt.toISOString(),
@@ -986,7 +992,10 @@ export async function regenerateTransactionPaymentToken(
     );
   }
 
-  if (!process.env.MIDTRANS_SERVER_KEY || !process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY) {
+  if (
+    !process.env.MIDTRANS_SERVER_KEY ||
+    !process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY
+  ) {
     throw new Error("Konfigurasi Midtrans belum lengkap di server.");
   }
 
@@ -1035,10 +1044,7 @@ export async function regenerateTransactionPaymentToken(
         error instanceof Prisma.PrismaClientValidationError &&
         error.message.toLowerCase().includes("snaptoken");
 
-      if (
-        isMissingSnapTokenColumn ||
-        isSnapTokenValidationError
-      ) {
+      if (isMissingSnapTokenColumn || isSnapTokenValidationError) {
         await prisma.order.update({
           where: { id: order.id },
           data: {
@@ -1090,27 +1096,27 @@ export async function updateTransactionDocumentations(
     async (tx) => {
       const imageWhere = isGrouped
         ? {
-          animalGroupId: order.animalGroupId as string,
-          stage: "STAGE_1" as ReportStage,
-          mediaType: "IMAGE" as const,
-        }
+            animalGroupId: order.animalGroupId as string,
+            stage: "STAGE_1" as ReportStage,
+            mediaType: "IMAGE" as const,
+          }
         : {
-          orderId: order.id,
-          stage: "STAGE_1" as ReportStage,
-          mediaType: "IMAGE" as const,
-        };
+            orderId: order.id,
+            stage: "STAGE_1" as ReportStage,
+            mediaType: "IMAGE" as const,
+          };
 
       const videoWhere = isGrouped
         ? {
-          animalGroupId: order.animalGroupId as string,
-          stage: "STAGE_2" as ReportStage,
-          mediaType: "VIDEO" as const,
-        }
+            animalGroupId: order.animalGroupId as string,
+            stage: "STAGE_2" as ReportStage,
+            mediaType: "VIDEO" as const,
+          }
         : {
-          orderId: order.id,
-          stage: "STAGE_2" as ReportStage,
-          mediaType: "VIDEO" as const,
-        };
+            orderId: order.id,
+            stage: "STAGE_2" as ReportStage,
+            mediaType: "VIDEO" as const,
+          };
 
       await tx.documentation.deleteMany({ where: imageWhere });
 
@@ -1462,14 +1468,14 @@ export async function distributeDocumentations(
       if (videoItem || shouldRemoveVideo) {
         const yearWhere = input.distributionYear
           ? (() => {
-            const { startDate, endDate } = getYearRange(
-              input.distributionYear as number,
-            );
-            return {
-              gte: startDate,
-              lt: endDate,
-            };
-          })()
+              const { startDate, endDate } = getYearRange(
+                input.distributionYear as number,
+              );
+              return {
+                gte: startDate,
+                lt: endDate,
+              };
+            })()
           : undefined;
 
         const allCustomerOrders = await tx.order.findMany({
@@ -1479,8 +1485,8 @@ export async function distributeDocumentations(
             },
             ...(yearWhere
               ? {
-                createdAt: yearWhere,
-              }
+                  createdAt: yearWhere,
+                }
               : {}),
           },
           select: {
@@ -1915,10 +1921,10 @@ export async function getDocumentationDistributionYearDetail(year: number) {
     totalTransactions,
     latestVideo: latestVideoDoc
       ? {
-        mediaUrl: latestVideoDoc.mediaUrl,
-        fileName: latestVideoDoc.description,
-        uploadedAt: latestVideoDoc.createdAt,
-      }
+          mediaUrl: latestVideoDoc.mediaUrl,
+          fileName: latestVideoDoc.description,
+          uploadedAt: latestVideoDoc.createdAt,
+        }
       : null,
   };
 }

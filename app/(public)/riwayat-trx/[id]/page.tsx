@@ -18,6 +18,7 @@ type DetailResponse = {
     invoice: string;
     customer: string;
     produk: string;
+    namaBerqurban?: string;
     tanggal: string;
     createdAt: string;
     nominal: string;
@@ -164,7 +165,7 @@ export default function DetailTransaksiPage() {
           pequrban={detail.customer}
           kodeHewan={kodeHewan}
           metodePembayaran={formatPaymentMethod(detail.paymentMethod)}
-          namaBerqurban={detail.customer}
+          namaBerqurban={detail.namaBerqurban || detail.customer}
           produk={detail.produk}
           harga={`${formatRupiah(detail.nominal)}`}
         />
