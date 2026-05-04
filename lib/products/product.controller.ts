@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+import { put } from "@vercel/blob";
 import { Prisma } from "@prisma/client";
 import {
   createProduct,
@@ -93,6 +94,33 @@ function parseDiscount(discountRaw: string | null) {
 async function storeUploadedImages(files: File[]) {
   if (files.length === 0) {
     return [];
+  }
+
+  const hasBlobToken = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  const isVercel = Boolean(process.env.VERCEL);
+
+  if (isVercel && !hasBlobToken) {
+    throw new Error("BLOB_READ_WRITE_TOKEN belum diset untuk Vercel Blob.");
+  }
+
+  const useBlobStorage = hasBlobToken;
+  if (useBlobStorage) {
+    const imageUrls: string[] = [];
+
+    for (const file of files) {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const safeName = sanitizeFilename(file.name || "image.jpg");
+      const filename = `products/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+      const blob = await put(filename, buffer, {
+        access: "public",
+        contentType: file.type || "application/octet-stream",
+      });
+
+      imageUrls.push(blob.url);
+    }
+
+    return imageUrls;
   }
 
   const uploadDir = path.join(process.cwd(), "public", "hewan");

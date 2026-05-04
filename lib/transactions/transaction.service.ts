@@ -47,6 +47,7 @@ export type TransactionDetail = {
   id: string;
   invoice: string;
   customer: string;
+  participants: string[];
   produk: string;
   tanggal: string;
   createdAt: string;
@@ -813,6 +814,7 @@ export async function getTransactionById(
   if (fallback) {
     return {
       ...fallback,
+      participants: [],
       createdAt: new Date().toISOString(),
       snapToken: null,
       paymentMethod: null,
@@ -841,6 +843,11 @@ export async function getTransactionById(
       payment: {
         select: {
           paymentType: true,
+        },
+      },
+      participants: {
+        select: {
+          participantName: true,
         },
       },
       product: {
@@ -922,6 +929,7 @@ export async function getTransactionById(
       order.invoice?.invoiceNumber ??
       `ORD-${order.id.slice(0, 8).toUpperCase()}`,
     customer: order.donorName,
+    participants: order.participants.map((item) => item.participantName),
     produk: order.product.name,
     tanggal: formatDate(order.createdAt),
     createdAt: order.createdAt.toISOString(),

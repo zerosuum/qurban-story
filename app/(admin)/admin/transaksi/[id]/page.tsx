@@ -11,6 +11,7 @@ type DetailResponse = {
         id: string;
         invoice: string;
         customer: string;
+        participants: string[];
         produk: string;
         tanggal: string;
         nominal: string;
@@ -439,7 +440,11 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                                 </div>
                                 <div>
                                     <p className="text-sm text-neutral-500">Nama yang Berqurban</p>
-                                    <p className="font-semibold text-neutral-900">{detail.customer}</p>
+                                    <p className="font-semibold text-neutral-900">
+                                        {detail.participants.length > 0
+                                            ? detail.participants.join(", ")
+                                            : detail.customer}
+                                    </p>
                                 </div>
                                 <div>
                                     <p className="text-sm text-neutral-500">Produk</p>
