@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import StatusPembayaranBadge from "@/components/ui/StatusPembayaranBadge";
 import StatusPelaporanBadge from "@/components/ui/StatusPelaporanBadge";
 import StatusAlert from "@/components/ui/StatusAlert";
+import DateFieldWithPicker from "@/components/ui/DateFieldWithPicker";
 
 type DetailResponse = {
     data: {
@@ -469,13 +470,13 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                                 <p className="text-2xl font-bold text-neutral-900">Tahap 1: Disembelih</p>
                                 <p className="mt-1 text-sm text-neutral-700">Hewan qurban telah disembelih sesuai syariat Islam.</p>
                                 {isEditMode ? (
-                                    <input
-                                        type="text"
-                                        value={tahap1Date}
-                                        onChange={(event) => setTahap1Date(event.target.value)}
-                                        placeholder="dd/mm/yyyy"
-                                        className="mt-2 h-10 w-35 rounded-xl border border-neutral-200 px-3 text-sm text-neutral-600 outline-none focus:border-primary-500"
-                                    />
+                                    <div className="mt-2">
+                                        <DateFieldWithPicker
+                                            value={tahap1Date}
+                                            onChange={setTahap1Date}
+                                            placeholder="dd/mm/yyyy"
+                                        />
+                                    </div>
                                 ) : (
                                     <p className="mt-1 text-sm text-neutral-700">{detail?.reportingDates?.tahap1Date ?? "-"}</p>
                                 )}
@@ -488,13 +489,13 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                                 <p className="text-2xl font-bold text-neutral-900">Tahap 2: Distribusi</p>
                                 <p className="mt-1 text-sm text-neutral-700">Daging qurban sedang didistribusikan kepada penerima manfaat.</p>
                                 {isEditMode ? (
-                                    <input
-                                        type="text"
-                                        value={tahap2Date}
-                                        onChange={(event) => setTahap2Date(event.target.value)}
-                                        placeholder="dd/mm/yyyy"
-                                        className="mt-2 h-10 w-35 rounded-xl border border-neutral-200 px-3 text-sm text-neutral-600 outline-none focus:border-primary-500"
-                                    />
+                                    <div className="mt-2">
+                                        <DateFieldWithPicker
+                                            value={tahap2Date}
+                                            onChange={setTahap2Date}
+                                            placeholder="dd/mm/yyyy"
+                                        />
+                                    </div>
                                 ) : (
                                     <p className="mt-1 text-sm text-neutral-700">{detail?.reportingDates?.tahap2Date ?? "-"}</p>
                                 )}
@@ -508,13 +509,13 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                                 <p className="mt-1 text-sm text-neutral-700">Proses qurban telah selesai.</p>
                                 <p className="text-sm text-neutral-700">Terimakasih telah mempercayai Qurban Story.</p>
                                 {isEditMode ? (
-                                    <input
-                                        type="text"
-                                        value={tahap3Date}
-                                        onChange={(event) => setTahap3Date(event.target.value)}
-                                        placeholder="dd/mm/yyyy"
-                                        className="mt-2 h-10 w-35 rounded-xl border border-neutral-200 px-3 text-sm text-neutral-600 outline-none focus:border-primary-500"
-                                    />
+                                    <div className="mt-2">
+                                        <DateFieldWithPicker
+                                            value={tahap3Date}
+                                            onChange={setTahap3Date}
+                                            placeholder="dd/mm/yyyy"
+                                        />
+                                    </div>
                                 ) : (
                                     <p className="mt-1 text-sm text-neutral-700">{detail?.reportingDates?.tahap3Date ?? "-"}</p>
                                 )}

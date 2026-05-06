@@ -34,6 +34,7 @@ export type DashboardTransactionMetrics = {
   totalTransaksi: number;
   pembayaranBerhasil: number;
   menungguPembayaran: number;
+  pembayaranKadaluarsa: number;
   tanpaDokumentasi: number;
   progress: {
     tahap1: number;
@@ -381,16 +382,16 @@ function buildOrderWhereInput(
     ...(paymentStatusFilter ? { status: paymentStatusFilter } : {}),
     ...(keyword
       ? {
-          OR: [
-            { donorName: { contains: keyword, mode: "insensitive" } },
-            { product: { name: { contains: keyword, mode: "insensitive" } } },
-            {
-              invoice: {
-                invoiceNumber: { contains: keyword, mode: "insensitive" },
-              },
+        OR: [
+          { donorName: { contains: keyword, mode: "insensitive" } },
+          { product: { name: { contains: keyword, mode: "insensitive" } } },
+          {
+            invoice: {
+              invoiceNumber: { contains: keyword, mode: "insensitive" },
             },
-          ],
-        }
+          },
+        ],
+      }
       : {}),
   };
 }
@@ -747,6 +748,7 @@ export async function getDashboardTransactionMetrics(
       totalTransaksi: 0,
       pembayaranBerhasil: 0,
       menungguPembayaran: 0,
+      pembayaranKadaluarsa: 0,
       tanpaDokumentasi: 0,
       progress: {
         tahap1: 0,
@@ -762,6 +764,9 @@ export async function getDashboardTransactionMetrics(
   ).length;
   const menungguPembayaran = orders.filter(
     (order) => order.status === "PAYMENT_PENDING",
+  ).length;
+  const pembayaranKadaluarsa = orders.filter(
+    (order) => order.status === "EXPIRED",
   ).length;
   const tanpaDokumentasi = orders.filter(
     (order) =>
@@ -798,6 +803,7 @@ export async function getDashboardTransactionMetrics(
     totalTransaksi,
     pembayaranBerhasil,
     menungguPembayaran,
+    pembayaranKadaluarsa,
     tanpaDokumentasi,
     progress: {
       ...progress,
@@ -1096,27 +1102,27 @@ export async function updateTransactionDocumentations(
     async (tx) => {
       const imageWhere = isGrouped
         ? {
-            animalGroupId: order.animalGroupId as string,
-            stage: "STAGE_1" as ReportStage,
-            mediaType: "IMAGE" as const,
-          }
+          animalGroupId: order.animalGroupId as string,
+          stage: "STAGE_1" as ReportStage,
+          mediaType: "IMAGE" as const,
+        }
         : {
-            orderId: order.id,
-            stage: "STAGE_1" as ReportStage,
-            mediaType: "IMAGE" as const,
-          };
+          orderId: order.id,
+          stage: "STAGE_1" as ReportStage,
+          mediaType: "IMAGE" as const,
+        };
 
       const videoWhere = isGrouped
         ? {
-            animalGroupId: order.animalGroupId as string,
-            stage: "STAGE_2" as ReportStage,
-            mediaType: "VIDEO" as const,
-          }
+          animalGroupId: order.animalGroupId as string,
+          stage: "STAGE_2" as ReportStage,
+          mediaType: "VIDEO" as const,
+        }
         : {
-            orderId: order.id,
-            stage: "STAGE_2" as ReportStage,
-            mediaType: "VIDEO" as const,
-          };
+          orderId: order.id,
+          stage: "STAGE_2" as ReportStage,
+          mediaType: "VIDEO" as const,
+        };
 
       await tx.documentation.deleteMany({ where: imageWhere });
 
@@ -1468,14 +1474,14 @@ export async function distributeDocumentations(
       if (videoItem || shouldRemoveVideo) {
         const yearWhere = input.distributionYear
           ? (() => {
-              const { startDate, endDate } = getYearRange(
-                input.distributionYear as number,
-              );
-              return {
-                gte: startDate,
-                lt: endDate,
-              };
-            })()
+            const { startDate, endDate } = getYearRange(
+              input.distributionYear as number,
+            );
+            return {
+              gte: startDate,
+              lt: endDate,
+            };
+          })()
           : undefined;
 
         const allCustomerOrders = await tx.order.findMany({
@@ -1485,8 +1491,8 @@ export async function distributeDocumentations(
             },
             ...(yearWhere
               ? {
-                  createdAt: yearWhere,
-                }
+                createdAt: yearWhere,
+              }
               : {}),
           },
           select: {
@@ -1921,10 +1927,10 @@ export async function getDocumentationDistributionYearDetail(year: number) {
     totalTransactions,
     latestVideo: latestVideoDoc
       ? {
-          mediaUrl: latestVideoDoc.mediaUrl,
-          fileName: latestVideoDoc.description,
-          uploadedAt: latestVideoDoc.createdAt,
-        }
+        mediaUrl: latestVideoDoc.mediaUrl,
+        fileName: latestVideoDoc.description,
+        uploadedAt: latestVideoDoc.createdAt,
+      }
       : null,
   };
 }

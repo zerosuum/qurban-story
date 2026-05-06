@@ -9,6 +9,7 @@ type DashboardMetricsResponse = {
         totalTransaksi: number;
         pembayaranBerhasil: number;
         menungguPembayaran: number;
+        pembayaranKadaluarsa: number;
         tanpaDokumentasi: number;
         progress: {
             tahap1: number;
@@ -28,6 +29,7 @@ export default function DashboardPage() {
         totalTransaksi: 0,
         pembayaranBerhasil: 0,
         menungguPembayaran: 0,
+        pembayaranKadaluarsa: 0,
         tanpaDokumentasi: 0,
         progress: {
             tahap1: 0,
@@ -87,10 +89,11 @@ export default function DashboardPage() {
                     <p className="text-xl font-bold">Dashboard Admin</p>
                     <p className="text-lg font-medium">Kelola transaksi dan pelaporan qurban.</p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6 w-full">
                     <DashboardCard title="Total Transaksi" value={formatNumber(metrics.totalTransaksi)} variant="blue" />
                     <DashboardCard title="Pembayaran Berhasil" value={formatNumber(metrics.pembayaranBerhasil)} variant="green" />
                     <DashboardCard title="Menunggu Pembayaran" value={formatNumber(metrics.menungguPembayaran)} variant="yellow" />
+                    <DashboardCard title="Pembayaran Kadaluarsa" value={formatNumber(metrics.pembayaranKadaluarsa)} variant="gray" />
                     <DashboardCard title="Tanpa Dokumentasi" value={formatNumber(metrics.tanpaDokumentasi)} variant="red" />
                 </div>
                 <div className="w-full rounded-xl border border-neutral-200 p-6 flex flex-col gap-4 h-fit bg-white">
@@ -99,21 +102,27 @@ export default function DashboardPage() {
                         <div className="w-full flex flex-col gap-2">
                             <div className="flex flex-row items-center justify-between w-full font-semibold text-primary-500">
                                 <p>Tahap 1 - Disembelih</p>
-                                <p>{formatNumber(metrics.progress.tahap1)}</p>
+                                <p>
+                                    {formatNumber(metrics.progress.tahap1)} / {formatNumber(metrics.progress.total)}
+                                </p>
                             </div>
                             <div className="w-full bg-neutral-100 rounded-full">
                                 <div className="bg-primary-500 h-2 rounded-full" style={{ width: `${progressPercentages.tahap1}%` }}></div>
                             </div>
                             <div className="flex flex-row items-center justify-between w-full font-semibold text-primary-500">
                                 <p>Tahap 2 - Distribusi</p>
-                                <p>{formatNumber(metrics.progress.tahap2)}</p>
+                                <p>
+                                    {formatNumber(metrics.progress.tahap2)} / {formatNumber(metrics.progress.total)}
+                                </p>
                             </div>
                             <div className="w-full bg-neutral-100 rounded-full">
                                 <div className="bg-primary-500 h-2 rounded-full" style={{ width: `${progressPercentages.tahap2}%` }}></div>
                             </div>
                             <div className="flex flex-row items-center justify-between w-full font-semibold text-primary-500">
                                 <p>Tahap 3 - Selesai</p>
-                                <p>{formatNumber(metrics.progress.tahap3)}</p>
+                                <p>
+                                    {formatNumber(metrics.progress.tahap3)} / {formatNumber(metrics.progress.total)}
+                                </p>
                             </div>
                             <div className="w-full bg-neutral-100">
                                 <div className="bg-primary-500 h-2 rounded-full" style={{ width: `${progressPercentages.tahap3}%` }}></div>

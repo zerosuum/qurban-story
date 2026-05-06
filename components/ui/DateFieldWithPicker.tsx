@@ -9,18 +9,27 @@ type DateFieldWithPickerProps = {
     placeholder?: string;
 };
 
-function parseIsoDate(value: string) {
+function parseDateValue(value: string) {
     if (!value) {
         return null;
     }
 
-    const [year, month, day] = value.split("-").map(Number);
+    if (value.includes("-")) {
+        const [year, month, day] = value.split("-").map(Number);
 
-    if (!year || !month || !day) {
-        return null;
+        if (year && month && day) {
+            return new Date(year, month - 1, day);
+        }
     }
 
-    return new Date(year, month - 1, day);
+    const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
+    if (match) {
+        const [, day, month, year] = match;
+        return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+
+    return null;
 }
 
 function toIsoDate(date: Date) {
@@ -35,7 +44,7 @@ function formatDateDisplay(value: string) {
         return "";
     }
 
-    const parsedDate = parseIsoDate(value);
+    const parsedDate = parseDateValue(value);
 
     if (!parsedDate) {
         return value;
@@ -58,7 +67,7 @@ export default function DateFieldWithPicker({
     const pickerRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        const date = parseIsoDate(value);
+        const date = parseDateValue(value);
         setSelectedDate(date ?? undefined);
     }, [value]);
 

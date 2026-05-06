@@ -1,6 +1,6 @@
 "use client";
 
-type DashboardCardVariant = "blue" | "green" | "yellow" | "red";
+type DashboardCardVariant = "blue" | "green" | "yellow" | "red" | "gray";
 
 type DashboardCardProps = {
     title: string;
@@ -13,6 +13,7 @@ const variantClasses: Record<DashboardCardVariant, string> = {
     green: "bg-[#E9F5EE] border-[#2D6A4F] text-[#2D6A4F]",
     yellow: "bg-[#FFF4E5] border-[#E67E22] text-[#E67E22]",
     red: "bg-[#FCEAEA] border-[#A63A3A] text-[#A63A3A]",
+    gray: "bg-[#F2F2F2] border-[#737373] text-[#3F3F46]",
 };
 
 export default function DashboardCard({
