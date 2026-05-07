@@ -5,6 +5,7 @@ const SUPER_ADMIN_EMAILS = [
   "nawwafzayyan27@gmail.com",
   "nawwafzayyanmusyafa@mail.ugm.ac.id",
   "delaaaanr@gmail.com",
+  "dinar.nugroho.p@mail.ugm.ac.id",
 ];
 
 function isSuperAdminEmail(email: string) {
