@@ -140,7 +140,12 @@ export default function CustomerPage() {
                 </div>
 
                 <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center">
-                    <SearchBar value={search} onChange={handleSearchChange} className="md:flex-1" />
+                    <SearchBar
+                        value={search}
+                        onChange={handleSearchChange}
+                        placeholder="Cari nama, email, atau nomor telepon"
+                        className="md:flex-1"
+                    />
                 </div>
 
                 <div className="overflow-x-auto rounded-xl border border-neutral-100">

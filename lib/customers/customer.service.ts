@@ -74,6 +74,13 @@ export async function listCustomers(query: CustomerQuery) {
                     OR: [
                         { name: { contains: keyword, mode: "insensitive" } },
                         { email: { contains: keyword, mode: "insensitive" } },
+                        {
+                            orders: {
+                                some: {
+                                    donorPhone: { contains: keyword, mode: "insensitive" },
+                                },
+                            },
+                        },
                     ],
                 }
                 : {}),

@@ -1,3 +1,4 @@
+import Link from "next/link";
 type ReportingStatus = "Tahap 1/3" | "Tahap 2/3" | "Selesai" | "Belum Dimulai";
 
 type CustomerTransaction = {
@@ -86,12 +87,12 @@ export default function CustomerDetailModal({ isOpen, isLoading = false, custome
                                                 </p>
                                                 <p className="text-base text-neutral-700">{transaction.reportingStatus}</p>
                                             </div>
-                                            <button
-                                                type="button"
-                                                className="h-10 w-fit rounded-xl border border-primary-500 px-5 text-base font-semibold text-primary-700"
+                                            <Link
+                                                href={`/invoice/${transaction.id}`}
+                                                className="inline-flex h-10 w-fit items-center justify-center rounded-xl border border-primary-500 px-5 text-base font-semibold text-primary-700"
                                             >
                                                 Lihat Transaksi
-                                            </button>
+                                            </Link>
                                         </div>
                                     ))}
                                 </div>
