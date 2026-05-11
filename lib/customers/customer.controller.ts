@@ -31,7 +31,7 @@ export async function handleListCustomers(request: Request) {
                 | "Semua Pelaporan"
                 | null) ?? undefined,
             page: parsePositiveInt(searchParams.get("page"), 1),
-            pageSize: parsePositiveInt(searchParams.get("pageSize"), 7),
+            pageSize: parsePositiveInt(searchParams.get("pageSize"), 25),
         });
 
         return NextResponse.json(result, { status: 200 });

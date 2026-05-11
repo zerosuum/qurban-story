@@ -38,7 +38,7 @@ type ApiMessageResponse = {
     message?: string;
 };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 25;
 
 function formatRole(role: AdminRole) {
     return role === "SUPERADMIN" ? "Super Admin" : "Admin";

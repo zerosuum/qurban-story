@@ -157,7 +157,7 @@ function mapProduct(product: {
 
 export async function listProducts(query: ProductQuery) {
   const page = Math.max(1, query.page ?? 1);
-  const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 10));
+  const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 25));
   const skip = (page - 1) * pageSize;
   const keyword = query.search?.trim();
   const now = new Date();
@@ -168,12 +168,12 @@ export async function listProducts(query: ProductQuery) {
     ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
     ...(keyword
       ? {
-          OR: [
-            { name: { contains: keyword, mode: "insensitive" } },
-            { weight: { contains: keyword, mode: "insensitive" } },
-            { description: { contains: keyword, mode: "insensitive" } },
-          ],
-        }
+        OR: [
+          { name: { contains: keyword, mode: "insensitive" } },
+          { weight: { contains: keyword, mode: "insensitive" } },
+          { description: { contains: keyword, mode: "insensitive" } },
+        ],
+      }
       : {}),
   };
 
@@ -255,7 +255,7 @@ export async function createProduct(payload: ProductPayload) {
 
   const computedName =
     shouldAppendTypeToName(payload.type) &&
-    !payload.name.toLowerCase().includes((payload.type as string).toLowerCase())
+      !payload.name.toLowerCase().includes((payload.type as string).toLowerCase())
       ? `${payload.name} (${payload.type})`
       : payload.name;
 
@@ -270,29 +270,29 @@ export async function createProduct(payload: ProductPayload) {
       isActive: payload.isActive ?? true,
       promos: hasDiscount
         ? {
-            create: {
-              discountType: payload.discountType,
-              discountValue: toDecimal(
-                payload.discountValue as string | number,
-              ),
-              startDate: payload.discountStartDate
-                ? new Date(payload.discountStartDate)
-                : new Date(),
-              endDate: payload.discountEndDate
-                ? new Date(payload.discountEndDate)
-                : null,
-              isActive: true,
-            },
-          }
+          create: {
+            discountType: payload.discountType,
+            discountValue: toDecimal(
+              payload.discountValue as string | number,
+            ),
+            startDate: payload.discountStartDate
+              ? new Date(payload.discountStartDate)
+              : new Date(),
+            endDate: payload.discountEndDate
+              ? new Date(payload.discountEndDate)
+              : null,
+            isActive: true,
+          },
+        }
         : undefined,
       images:
         payload.imageUrls && payload.imageUrls.length > 0
           ? {
-              create: payload.imageUrls.map((imageUrl, index) => ({
-                imageUrl,
-                isPrimary: index === 0,
-              })),
-            }
+            create: payload.imageUrls.map((imageUrl, index) => ({
+              imageUrl,
+              isPrimary: index === 0,
+            })),
+          }
           : undefined,
     },
     include: {

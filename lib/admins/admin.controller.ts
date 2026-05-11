@@ -42,7 +42,7 @@ export async function handleListAdmins(request: Request) {
         const result = await listAdmins({
             search: searchParams.get("search") ?? undefined,
             page: parsePositiveInt(searchParams.get("page"), 1),
-            pageSize: parsePositiveInt(searchParams.get("pageSize"), 10),
+            pageSize: parsePositiveInt(searchParams.get("pageSize"), 25),
         });
 
         return NextResponse.json(result, { status: 200 });

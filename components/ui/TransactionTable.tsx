@@ -58,7 +58,7 @@ type TransactionTableProps = {
     mode?: "dashboard" | "transaksi";
 };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 25;
 
 function formatRupiah(value: string) {
     const number = Number(value);
@@ -381,7 +381,7 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
                             </th>
                             <th className="px-4 py-3 font-semibold">Customer</th>
                             <th className="px-4 py-3 font-semibold">Produk</th>
-                            <th className="px-4 py-3 font-semibold">Tanggal</th>
+                            <th className="px-4 py-3 font-semibold">Tanggal Order</th>
                             <th className="px-4 py-3 font-semibold">Nominal (Rp)</th>
                             <th className="px-4 py-3 font-semibold">Pembayaran</th>
                             <th className="px-4 py-3 font-semibold">Pelaporan</th>

@@ -7,7 +7,7 @@ import DocumentationDistributionTable, {
     DistributionYearRow,
 } from "@/components/ui/DocumentationDistributionTable";
 
-const PAGE_SIZE = 3;
+const PAGE_SIZE = 25;
 
 type DocumentationYearsResponse = {
     data: DistributionYearRow[];

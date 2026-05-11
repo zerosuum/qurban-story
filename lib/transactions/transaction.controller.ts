@@ -48,7 +48,7 @@ export async function handleListTransactions(request: Request) {
                 | "Semua Pelaporan"
                 | null) ?? undefined,
             page: parsePositiveInt(searchParams.get("page"), 1),
-            pageSize: parsePositiveInt(searchParams.get("pageSize"), 10),
+            pageSize: parsePositiveInt(searchParams.get("pageSize"), 25),
             userId: userId,
         });
 

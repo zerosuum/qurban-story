@@ -63,7 +63,7 @@ function formatDate(date: Date) {
 
 export async function listCustomers(query: CustomerQuery) {
     const page = Math.max(1, query.page ?? 1);
-    const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 7));
+    const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 25));
     const keyword = query.search?.trim();
 
     const users = await prisma.user.findMany({

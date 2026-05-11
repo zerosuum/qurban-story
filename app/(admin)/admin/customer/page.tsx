@@ -18,7 +18,7 @@ type CustomerRow = {
     reportStatus: ReportingStatus;
 };
 
-const PAGE_SIZE = 7;
+const PAGE_SIZE = 25;
 
 type CustomersApiResponse = {
     data: CustomerRow[];

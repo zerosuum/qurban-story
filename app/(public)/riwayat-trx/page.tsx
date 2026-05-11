@@ -32,11 +32,10 @@ function CustomFilter({
     <div className="relative w-full md:w-[220px]">
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex justify-between items-center w-full h-10 px-4 py-2 cursor-pointer transition-all border bg-white ${
-          isOpen
+        className={`flex justify-between items-center w-full h-10 px-4 py-2 cursor-pointer transition-all border bg-white ${isOpen
             ? "rounded-t-xl border-[#DCDCDC] border-b-transparent"
             : "rounded-xl border-[#DCDCDC] hover:border-[#044B57]"
-        }`}
+          }`}
       >
         <span className="font-sans text-[16px] font-normal leading-[24px] text-[#525252] select-none truncate">
           {value}
@@ -47,9 +46,8 @@ function CustomFilter({
           height="24"
           viewBox="0 0 24 24"
           fill="none"
-          className={`shrink-0 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""
+            }`}
         >
           <path
             d="M12 15.4L6 9.4L7.4 8L12 12.6L16.6 8L18 9.4L12 15.4Z"
@@ -79,7 +77,7 @@ function CustomFilter({
   );
 }
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 25;
 
 type TransactionRow = {
   id: string;
@@ -279,7 +277,7 @@ export default function RiwayatTransaksiPage() {
                       <StatusPembayaranBadge
                         status={
                           item.pembayaran === "TERTUNDA" ||
-                          item.pembayaran === "PAYMENT_PENDING"
+                            item.pembayaran === "PAYMENT_PENDING"
                             ? "MENUNGGU PEMBAYARAN"
                             : item.pembayaran
                         }

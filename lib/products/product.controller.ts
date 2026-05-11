@@ -269,7 +269,7 @@ export async function handleListProducts(request: Request) {
     const result = await listProducts({
       search: searchParams.get("search") ?? undefined,
       page: parsePositiveInt(searchParams.get("page"), 1),
-      pageSize: parsePositiveInt(searchParams.get("pageSize"), 10),
+      pageSize: parsePositiveInt(searchParams.get("pageSize"), 25),
       isActive: isActiveFilter,
     });
 

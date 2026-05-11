@@ -375,12 +375,21 @@ function buildOrderWhereInput(
   query: Pick<TransactionQuery, "search" | "paymentStatus" | "userId">,
 ): Prisma.OrderWhereInput {
   const keyword = query.search?.trim();
+  const ordToken = keyword ? extractOrdToken(keyword) : null;
+  const normalizedToken = keyword ? normalizeInvoiceToken(keyword) : "";
+  const ordIdToken = ordToken
+    ? ordToken.replace(/^ORD/, "")
+    : normalizedToken.startsWith("ORD")
+      ? normalizedToken.slice(3)
+      : normalizedToken;
+  const shouldMatchOrderId = ordIdToken.length > 0;
+  const shouldSkipKeywordFilter = normalizedToken === "ORD";
   const paymentStatusFilter = mapUiToOrderStatus(query.paymentStatus);
 
   return {
     ...(query.userId ? { userId: query.userId } : {}),
     ...(paymentStatusFilter ? { status: paymentStatusFilter } : {}),
-    ...(keyword
+    ...(keyword && !shouldSkipKeywordFilter
       ? {
         OR: [
           { donorName: { contains: keyword, mode: "insensitive" } },
@@ -390,6 +399,9 @@ function buildOrderWhereInput(
               invoiceNumber: { contains: keyword, mode: "insensitive" },
             },
           },
+          ...(shouldMatchOrderId
+            ? [{ id: { contains: ordIdToken.toLowerCase() } }]
+            : []),
         ],
       }
       : {}),
@@ -568,14 +580,19 @@ function normalizeInvoiceToken(value: string): string {
 }
 
 function applyFilters(items: TransactionItem[], query: TransactionQuery) {
-  const keyword = query.search?.trim().toLowerCase();
+  const rawKeyword = query.search?.trim();
+  const keyword = rawKeyword?.toLowerCase();
+  const normalizedKeyword = rawKeyword ? normalizeInvoiceToken(rawKeyword) : "";
 
   return items.filter((item) => {
     const matchesSearch =
       !keyword ||
       item.invoice.toLowerCase().includes(keyword) ||
       item.customer.toLowerCase().includes(keyword) ||
-      item.produk.toLowerCase().includes(keyword);
+      item.produk.toLowerCase().includes(keyword) ||
+      (normalizedKeyword
+        ? normalizeInvoiceToken(item.invoice).includes(normalizedKeyword)
+        : false);
 
     const matchesPayment =
       !query.paymentStatus ||
@@ -624,7 +641,7 @@ function toListResponse(
 
 export async function listTransactions(query: TransactionQuery) {
   const page = Math.max(1, query.page ?? 1);
-  const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 10));
+  const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 25));
   const where = buildOrderWhereInput({
     search: query.search,
     paymentStatus: query.paymentStatus,
