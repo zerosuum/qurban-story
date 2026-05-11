@@ -19,6 +19,7 @@ type ProductDetailResponse = {
   price: string;
   promoPrice: string | null;
   images: { imageUrl: string; isPrimary: boolean }[];
+  stock: number;
 };
 
 function formatRupiah(value: string | number) {
@@ -184,6 +185,40 @@ export default function CheckoutPage() {
     );
   }
 
+  if (product.stock <= 0) {
+    return (
+      <div className="min-h-[calc(100vh-80px)] w-full flex flex-col justify-center items-center gap-4 bg-white">
+        <div className="p-6 bg-red-50 rounded-xl border border-red-200 text-center flex flex-col items-center gap-3">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#A63A3A"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span className="text-red-800 font-bold text-lg">Stok Habis</span>
+          <span className="text-red-600 text-sm max-w-[300px]">
+            Mohon maaf, kuota hewan qurban ini sudah terpenuhi / habis dipesan.
+          </span>
+          <Link
+            href="/produk"
+            className="mt-2 px-6 py-2 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Lihat Hewan Lain
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const mainImage =
     product.images.find((img) => img.isPrimary)?.imageUrl ||
     product.images[0]?.imageUrl ||
@@ -278,9 +313,14 @@ export default function CheckoutPage() {
             </label>
             <input
               type="tel"
+              inputMode="numeric"
               value={donorPhone}
-              onChange={(e) => setDonorPhone(e.target.value)}
+              onChange={(e) => {
+                const onlyNumbers = e.target.value.replace(/\D/g, "");
+                setDonorPhone(onlyNumbers);
+              }}
               placeholder="081233445566"
+              maxLength={15}
               className="w-full h-10 px-3 rounded-lg border border-neutral-200 text-[14px] text-neutral-900 outline-none focus:border-primary-500"
             />
           </div>

@@ -287,7 +287,14 @@ export default function RiwayatTransaksiPage() {
                       />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusPelaporanBadge status={item.pelaporan} size="sm" />
+                      <StatusPelaporanBadge
+                        status={
+                          item.pembayaran === "BERHASIL"
+                            ? item.pelaporan
+                            : "Belum Dimulai"
+                        }
+                        size="sm"
+                      />
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex justify-center items-center h-full w-full">

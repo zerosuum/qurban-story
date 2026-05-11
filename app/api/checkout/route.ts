@@ -85,6 +85,12 @@ export async function POST(request: Request) {
         { status: 404 },
       );
     }
+    if (product.stock <= 0) {
+      return NextResponse.json(
+        { message: "Mohon maaf, stok hewan qurban ini sudah habis." },
+        { status: 400 },
+      );
+    }
 
     const grossAmount = computeCheckoutGrossAmount({
       basePrice: product.price,
