@@ -84,6 +84,8 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
     const [tahap1Date, setTahap1Date] = useState("");
     const [tahap2Date, setTahap2Date] = useState("");
     const [tahap3Date, setTahap3Date] = useState("");
+    const [isPrefillingReport, setIsPrefillingReport] = useState(false);
+    const [sequenceWarning, setSequenceWarning] = useState<string | null>(null);
     const [refreshKey, setRefreshKey] = useState(0);
     const [isAllPagesSelected, setIsAllPagesSelected] = useState(false);
 
@@ -123,6 +125,18 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
 
         return () => window.clearTimeout(timer);
     }, [showSelectionWarning]);
+
+    useEffect(() => {
+        if (!sequenceWarning) {
+            return;
+        }
+
+        const timer = window.setTimeout(() => {
+            setSequenceWarning(null);
+        }, 3200);
+
+        return () => window.clearTimeout(timer);
+    }, [sequenceWarning]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -216,8 +230,12 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
         setTahap1Date("");
         setTahap2Date("");
         setTahap3Date("");
+        setIsPrefillingReport(false);
+        setIsProgressModalOpen(true);
 
         if (!isAllPagesSelected && selectedIds.length === 1) {
+            setIsPrefillingReport(true);
+
             try {
                 const response = await fetch(`/api/transactions/${selectedIds[0]}`);
                 if (response.ok) {
@@ -230,13 +248,23 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
                 }
             } catch {
                 // Keep fields empty if prefill fetch fails.
+            } finally {
+                setIsPrefillingReport(false);
             }
         }
-
-        setIsProgressModalOpen(true);
     };
 
     const handleOpenConfirmUpdate = () => {
+        if (tahap2Date && !tahap1Date) {
+            setSequenceWarning("Isi Tahap 1 terlebih dahulu.");
+            return;
+        }
+
+        if (tahap3Date && (!tahap1Date || !tahap2Date)) {
+            setSequenceWarning("Isi Tahap 1 dan Tahap 2 terlebih dahulu.");
+            return;
+        }
+
         setIsProgressModalOpen(false);
         setIsConfirmOpen(true);
     };
@@ -484,8 +512,21 @@ export default function TransactionTable({ onSummaryChange, mode = "dashboard" }
                 </div>
             )}
 
+            {isTransaksiMode && sequenceWarning && (
+                <div className="fixed bottom-5 right-5 z-120 w-[min(560px,calc(100vw-2rem))] rounded-xl border border-[#E74C3C] bg-[#FDEDEC] px-5 py-4 text-[#C0392B] shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#C0392B] text-base font-bold">!</span>
+                        <div>
+                            <p className="font-bold">Urutan pelaporan tidak valid</p>
+                            <p className="mt-1">{sequenceWarning}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <UpdatePelaporanModal
                 isOpen={isTransaksiMode && isProgressModalOpen}
+                isLoading={isPrefillingReport}
                 selectedCount={selectedCount}
                 tahap1Date={tahap1Date}
                 tahap2Date={tahap2Date}

@@ -183,6 +183,10 @@ export async function upsertAdmin(payload: CreateAdminPayload): Promise<UpsertAd
             throw new Error("Email tersebut sudah terdaftar sebagai superadmin.");
         }
 
+        if (existing.role === UserRole.ADMIN) {
+            throw new Error("Email admin sudah terdaftar.");
+        }
+
         const updated = await prisma.user.update({
             where: {
                 id: existing.id,

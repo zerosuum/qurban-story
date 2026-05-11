@@ -4,6 +4,7 @@ import DateFieldWithPicker from "./DateFieldWithPicker";
 
 type UpdatePelaporanModalProps = {
     isOpen: boolean;
+    isLoading?: boolean;
     selectedCount: number;
     tahap1Date: string;
     tahap2Date: string;
@@ -17,6 +18,7 @@ type UpdatePelaporanModalProps = {
 
 export default function UpdatePelaporanModal({
     isOpen,
+    isLoading = false,
     selectedCount,
     tahap1Date,
     tahap2Date,
@@ -44,6 +46,13 @@ export default function UpdatePelaporanModal({
                 </button>
 
                 <h3 className="text-[38px] font-bold leading-tight text-black">Progress Pelaporan</h3>
+
+                {isLoading && (
+                    <div className="mt-4 flex items-center gap-3 rounded-xl border border-neutral-100 bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
+                        <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-neutral-300 border-t-primary-500" />
+                        Memuat data pelaporan...
+                    </div>
+                )}
 
                 <div className="mt-6 flex flex-col gap-6">
                     <div className="flex items-start gap-4">
@@ -97,6 +106,7 @@ export default function UpdatePelaporanModal({
                     <button
                         type="button"
                         onClick={onApply}
+                        disabled={isLoading}
                         className="h-10 cursor-pointer rounded-xl bg-primary-500 px-6 text-base font-semibold text-white hover:bg-primary-600"
                     >
                         Terapkan ke {selectedCount} transaksi

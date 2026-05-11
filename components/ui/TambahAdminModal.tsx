@@ -21,12 +21,10 @@ const initialForm: TambahAdminForm = {
 export default function TambahAdminModal({ isOpen, onClose, onSubmitAdmin, onSubmitResult }: TambahAdminModalProps) {
     const [form, setForm] = useState<TambahAdminForm>(initialForm);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [inlineError, setInlineError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isOpen) {
             setForm(initialForm);
-            setInlineError(null);
             setIsSubmitting(false);
         }
     }, [isOpen]);
@@ -43,11 +41,10 @@ export default function TambahAdminModal({ isOpen, onClose, onSubmitAdmin, onSub
         }
 
         if (!form.email.trim()) {
-            setInlineError("Email admin wajib diisi.");
+            onSubmitResult("error", "Email admin wajib diisi.");
             return;
         }
 
-        setInlineError(null);
         setIsSubmitting(true);
 
         try {
@@ -59,7 +56,6 @@ export default function TambahAdminModal({ isOpen, onClose, onSubmitAdmin, onSub
             onClose();
         } catch (error) {
             const message = error instanceof Error ? error.message : "Gagal menambahkan admin.";
-            setInlineError(message);
             onSubmitResult("error", message);
         } finally {
             setIsSubmitting(false);
@@ -96,8 +92,6 @@ export default function TambahAdminModal({ isOpen, onClose, onSubmitAdmin, onSub
                             disabled={isSubmitting}
                         />
                     </div>
-
-                    {inlineError && <p className="text-sm text-red-500">{inlineError}</p>}
 
                     <div className="mt-6 flex justify-end gap-3">
                         <Button

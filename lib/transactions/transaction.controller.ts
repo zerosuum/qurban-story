@@ -198,6 +198,10 @@ export async function handleBulkUpdateReportingStatus(request: Request) {
             return NextResponse.json({ message }, { status: 400 });
         }
 
+        if (message.includes("Urutan pelaporan") || message.includes("Tanggal Tahap")) {
+            return NextResponse.json({ message }, { status: 400 });
+        }
+
         return NextResponse.json({ message }, { status: 500 });
     }
 }

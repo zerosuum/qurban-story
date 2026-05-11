@@ -485,6 +485,36 @@ function parseDateInput(value?: string): Date | null {
   return parsed;
 }
 
+function validateReportingSequence(
+  tahap1Date: Date | null,
+  tahap2Date: Date | null,
+  tahap3Date: Date | null,
+) {
+  const hasTahap1 = Boolean(tahap1Date);
+  const hasTahap2 = Boolean(tahap2Date);
+  const hasTahap3 = Boolean(tahap3Date);
+
+  if (hasTahap2 && !hasTahap1) {
+    throw new Error(
+      "Urutan pelaporan tidak valid. Isi Tahap 1 terlebih dahulu.",
+    );
+  }
+
+  if (hasTahap3 && (!hasTahap1 || !hasTahap2)) {
+    throw new Error(
+      "Urutan pelaporan tidak valid. Isi Tahap 1 dan Tahap 2 terlebih dahulu.",
+    );
+  }
+
+  if (tahap1Date && tahap2Date && tahap1Date.getTime() > tahap2Date.getTime()) {
+    throw new Error("Tanggal Tahap 2 harus sama atau setelah Tahap 1.");
+  }
+
+  if (tahap2Date && tahap3Date && tahap2Date.getTime() > tahap3Date.getTime()) {
+    throw new Error("Tanggal Tahap 3 harus sama atau setelah Tahap 2.");
+  }
+}
+
 function mapStageToUi(stage: ReportStage): ReportingStatusUi {
   if (stage === "STAGE_3") return "Selesai";
   if (stage === "STAGE_2") return "Tahap 2/3";
@@ -1244,6 +1274,12 @@ export async function bulkUpdateReportingStatus(
   const parsedTahap1Date = parseDateInput(input.tahap1Date);
   const parsedTahap2Date = parseDateInput(input.tahap2Date);
   const parsedTahap3Date = parseDateInput(input.tahap3Date);
+
+  validateReportingSequence(
+    parsedTahap1Date,
+    parsedTahap2Date,
+    parsedTahap3Date,
+  );
 
   const targetStage: ReportStage = parsedTahap3Date
     ? "STAGE_3"

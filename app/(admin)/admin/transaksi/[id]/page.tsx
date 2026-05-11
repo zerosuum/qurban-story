@@ -71,6 +71,7 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
     const [slaughterFiles, setSlaughterFiles] = useState<File[]>([]);
     const [distributionVideoFile, setDistributionVideoFile] = useState<File | null>(null);
     const [distributionReportFile, setDistributionReportFile] = useState<File | null>(null);
+    const [mediaLoadCount, setMediaLoadCount] = useState(0);
     const [isSaving, setIsSaving] = useState(false);
     const [alertState, setAlertState] = useState<{
         isOpen: boolean;
@@ -83,6 +84,17 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
         title: "",
         message: "",
     });
+
+    const MAX_DOCUMENTATION_FILE_SIZE = 5 * 1024 * 1024;
+
+    const notifyFileTooLarge = (file: File) => {
+        setAlertState({
+            isOpen: true,
+            type: "error",
+            title: "Gagal",
+            message: `Ukuran file ${file.name} melebihi 5MB.`,
+        });
+    };
 
     useEffect(() => {
         if (!alertState.isOpen) {
@@ -170,6 +182,7 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
     }, [params]);
 
     const actionButtonLabel = isEditMode ? "Simpan Perubahan" : "Perbarui Pelaporan";
+    const isMediaLoading = mediaLoadCount > 0;
     const animalCode = detail?.produk.toLowerCase().includes("kambing")
         ? "KMB-001"
         : detail?.produk.toLowerCase().includes("sapi")
@@ -183,11 +196,22 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
             return;
         }
 
+        const oversized = files.find((file) => file.size > MAX_DOCUMENTATION_FILE_SIZE);
+        if (oversized) {
+            notifyFileTooLarge(oversized);
+        }
+
+        const acceptedFiles = files.filter((file) => file.size <= MAX_DOCUMENTATION_FILE_SIZE);
+        if (acceptedFiles.length === 0) {
+            event.target.value = "";
+            return;
+        }
+
         setSlaughterFiles((prev) => {
             const existing = new Set(prev.map((file) => `${file.name}-${file.size}-${file.lastModified}`));
             const next = [...prev];
 
-            for (const file of files) {
+            for (const file of acceptedFiles) {
                 const key = `${file.name}-${file.size}-${file.lastModified}`;
 
                 if (existing.has(key)) {
@@ -209,6 +233,11 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
             return;
         }
 
+        if (file.size > MAX_DOCUMENTATION_FILE_SIZE) {
+            notifyFileTooLarge(file);
+            return;
+        }
+
         try {
             const nextDataUrl = await fileToDataUrl(file);
             setExistingPhotoUrls((prev) => prev.map((url, i) => (i === index ? nextDataUrl : url)));
@@ -219,6 +248,11 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
 
     const handleReplaceNewPhoto = (index: number, file: File | null) => {
         if (!file) {
+            return;
+        }
+
+        if (file.size > MAX_DOCUMENTATION_FILE_SIZE) {
+            notifyFileTooLarge(file);
             return;
         }
 
@@ -237,6 +271,11 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
 
     const handleDistributionVideoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0] ?? null;
+        if (file && file.size > MAX_DOCUMENTATION_FILE_SIZE) {
+            notifyFileTooLarge(file);
+            event.target.value = "";
+            return;
+        }
         setDistributionVideoFile(file);
         if (file) {
             setExistingVideoUrl(null);
@@ -251,6 +290,11 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
 
     const handleDistributionReportChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0] ?? null;
+        if (file && file.size > MAX_DOCUMENTATION_FILE_SIZE) {
+            notifyFileTooLarge(file);
+            event.target.value = "";
+            return;
+        }
         setDistributionReportFile(file);
         event.target.value = "";
     };
@@ -258,8 +302,18 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
     const fileToDataUrl = (file: File) =>
         new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result ?? ""));
-            reader.onerror = () => reject(new Error(`Gagal membaca file ${file.name}`));
+            setMediaLoadCount((prev) => prev + 1);
+
+            const finalize = () => setMediaLoadCount((prev) => Math.max(0, prev - 1));
+
+            reader.onload = () => {
+                finalize();
+                resolve(String(reader.result ?? ""));
+            };
+            reader.onerror = () => {
+                finalize();
+                reject(new Error(`Gagal membaca file ${file.name}`));
+            };
             reader.readAsDataURL(file);
         });
 
@@ -527,6 +581,13 @@ export default function DetailTransaksiPage({ params }: { params: Promise<{ id: 
                 <section className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
                     <p className="text-xl font-bold text-black">Dokumentasi</p>
                     <p className="mt-2 text-neutral-700">Foto &amp; video penyembelihan</p>
+
+                    {isEditMode && isMediaLoading && (
+                        <div className="mt-3 flex items-center gap-3 rounded-xl border border-neutral-100 bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
+                            <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-neutral-300 border-t-primary-500" />
+                            Memuat file dokumentasi...
+                        </div>
+                    )}
 
                     {isEditMode ? (
                         <>

@@ -24,6 +24,7 @@ async function main() {
   const superAdminEmails = [
     "nawwafzayyan27@gmail.com",
     "nawwafzayyanmusyafa@mail.ugm.ac.id",
+    "dinar.nugroho.p@mail.ugm.ac.id",
   ];
 
   await prisma.animalSpecies.createMany({
