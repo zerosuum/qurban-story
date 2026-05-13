@@ -111,12 +111,16 @@ export default function Navbar() {
 
           {status === "unauthenticated" && (
             <>
-              <Link href="/login" className={btnOutline}>
+              <Link
+                href="/login"
+                className={btnSolid}
+                onClick={closeMobileMenu}
+              >
                 Masuk
               </Link>
-              <Link href="/register" className={btnSolid}>
+              {/* <Link href="/register" className={btnSolid}>
                 Daftar
-              </Link>
+              </Link> */}
             </>
           )}
 
@@ -197,20 +201,16 @@ export default function Navbar() {
 
           {status === "unauthenticated" && (
             <>
-              <Link
-                href="/login"
-                onClick={closeMobileMenu}
-                className={btnOutline}
-              >
+              <Link href="/login" className={btnSolid}>
                 Masuk
               </Link>
-              <Link
+              {/* <Link
                 href="/register"
                 onClick={closeMobileMenu}
                 className={btnSolid}
               >
                 Daftar
-              </Link>
+              </Link> */}
             </>
           )}
 

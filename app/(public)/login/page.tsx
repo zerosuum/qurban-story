@@ -1,7 +1,6 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
-import Link from "next/link";
 
 export default function LoginPage() {
   const { status } = useSession();
@@ -29,7 +28,8 @@ export default function LoginPage() {
         </h1>
 
         <p className="text-neutral-400 text-center text-[14px] sm:text-[16px] leading-6">
-          Masuk menggunakan akun Google untuk melanjutkan.
+          Lanjutkan dengan akun Google Anda. Jika belum memiliki akun, sistem
+          akan otomatis mendaftarkannya.
         </p>
 
         <button
@@ -65,15 +65,8 @@ export default function LoginPage() {
               fill="#EA4335"
             />
           </svg>
-          Masuk dengan Google
+          Lanjutkan dengan Google
         </button>
-
-        <p className="text-center text-[14px] sm:text-[16px] text-neutral-400">
-          Belum punya akun?{" "}
-          <Link href="/register" className="font-bold text-primary-500">
-            Daftar di sini
-          </Link>
-        </p>
       </div>
     </div>
   );
