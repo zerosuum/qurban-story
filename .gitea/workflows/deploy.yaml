@@ -18,10 +18,18 @@ jobs:
           export SSHPASS="${{ secrets.SSH_PASSWORD }}"
           sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USERNAME }}@172.17.0.1 << 'EOF'
             cd /var/www/qurban-story
+            
             if [ ! -d ".git" ]; then
-              git clone http://10.0.2.15:3000/qurbanstory/qurban-story.git .
+              echo "Membersihkan dan menyiapkan repository baru..."
+              git init
+              git remote add origin http://10.0.2.15:3000/qurbanstory/qurban-story.git
+              git fetch --all
+              git reset --hard origin/main
             else
-              git pull origin main
+              echo "Repository terdeteksi, melakukan git pull..."
+              git fetch --all
+              git reset --hard origin/main
             fi
+            
             docker compose up -d --build
           EOF
