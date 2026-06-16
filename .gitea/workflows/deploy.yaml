@@ -7,6 +7,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Install cURL
+        run: apt-get update && apt-get install -y curl
+
       - name: Eksekusi SSH untuk Deploy
         uses: appleboy/ssh-action@master
         with:
