@@ -1,0 +1,23 @@
+name: CI/CD Pipeline Qurban Story
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Eksekusi SSH untuk Deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            cd /var/www/qurban-story
+            if [ ! -d ".git" ]; then
+              git clone http://192.168.64.2:3000/qurbanstory/qurban-story.git .
+            else
+              git pull origin main
+            fi
+            docker compose up -d --build
