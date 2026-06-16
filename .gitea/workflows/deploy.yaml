@@ -16,7 +16,7 @@ jobs:
           script: |
             cd /var/www/qurban-story
             if [ ! -d ".git" ]; then
-              git clone http://192.168.64.2:3000/qurbanstory/qurban-story.git .
+              git clone http://10.0.2.15:3000/qurbanstory/qurban-story.git .
             else
               git pull origin main
             fi
