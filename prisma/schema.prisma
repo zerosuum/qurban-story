@@ -4,8 +4,6 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 generator client {
   provider = "prisma-client-js"
-  url = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 datasource db {
@@ -98,7 +96,6 @@ model ProductImage {
   imageUrl  String   @map("image_url")
   isPrimary Boolean  @default(false) @map("is_primary")
   createdAt DateTime @default(now()) @map("created_at")
-
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("product_images")
