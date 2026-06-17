@@ -3,9 +3,6 @@
 # dependencies
 /node_modules
 
-# bun
-bun.lockb
-
 # Next.js build output
 /.next
 /out
@@ -50,3 +47,17 @@ next-env.d.ts
 # editor
 .vscode
 .idea
+
+# Local database 
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# macOS specific files
+.AppleDouble
+.LSOverride
+Icon
+
+# Docker
+.docker
